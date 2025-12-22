@@ -1,13 +1,15 @@
-import { products } from '@/lib/products';
+import { prisma } from "@/lib/prisma";
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { AddToCartButton } from '@/app/components/AddToCartButton';
 
-// Correct Typing for Page Props in Next.js 15+ (Params is a Promise)
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const product = products.find((p) => p.id === id);
+
+    const product = await prisma.product.findUnique({
+        where: { id }
+    });
 
     if (!product) {
         notFound();
@@ -20,9 +22,15 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </Link>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {/* Image Placeholder */}
-                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-brand-text/30 bg-brand-light/50 text-xl font-display">
-                    Image du Produit
+                {/* Image */}
+                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xl font-display overflow-hidden">
+                    {product.image && product.image.startsWith('http') ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <span className="text-brand-text/30 bg-brand-light/50 w-full h-full flex items-center justify-center">
+                            {product.image || "Image du Produit"}
+                        </span>
+                    )}
                 </div>
 
                 {/* Details */}
@@ -32,7 +40,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
                     <div className="prose prose-stone text-brand-text/80">
                         <p>{product.description}</p>
-                        <p className="text-sm italic mt-4">Pièce unique faite main.</p>
+                        <p className="text-sm italic mt-4">Pièce unique, quantité : {product.quantity}</p>
                     </div>
 
                     <AddToCartButton product={product} />

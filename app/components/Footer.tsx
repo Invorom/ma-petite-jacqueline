@@ -1,6 +1,6 @@
 export function Footer() {
     return (
-        <footer className="w-full border-t bg-brand-bg-light py-12">
+        <footer className="flex-none w-full border-t bg-brand-light py-8 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
             <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-4 text-center md:text-left">
                 <div className="flex flex-col items-center md:items-start">
                     <span className="font-display text-3xl text-brand-secondary mb-4">Ma petite Jacqueline</span>

@@ -27,17 +27,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="scroll-smooth">
+    <html lang="fr" className="h-full">
       <body
         className={cn(
-          "min-h-screen font-body antialiased flex flex-col bg-brand-light text-brand-text",
+          "h-full font-body antialiased flex flex-col bg-brand-light text-brand-text overflow-hidden",
           dancingScript.variable,
           inter.variable
         )}
       >
         <CartProvider>
           <Header />
-          <main className="flex-1">
+          <main className="flex-1 overflow-y-auto scroll-smooth">
             {children}
           </main>
           <Footer />
