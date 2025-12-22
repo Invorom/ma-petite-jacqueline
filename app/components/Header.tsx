@@ -27,6 +27,9 @@ export function Header() {
                     <Link href="/vaisselle-de-famille" className="hover:text-brand-secondary transition-colors">
                         Projet "Vaisselle de famille"
                     </Link>
+                    <Link href="/shop" className="hover:text-brand-secondary transition-colors font-bold text-brand-secondary">
+                        Boutique
+                    </Link>
                     <Link href="/account" className="flex items-center gap-1 hover:text-brand-secondary transition-colors">
                         <User className="h-4 w-4" />
                         Compte
