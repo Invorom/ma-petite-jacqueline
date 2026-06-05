@@ -31,6 +31,11 @@ export default async function AdminLayout({
                         Produits
                     </Link>
 
+                    <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-secondary/10 transition-colors text-brand-text/80 font-medium">
+                        <Package className="w-5 h-5" />
+                        Commandes
+                    </Link>
+
                     <Link href="/admin/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-secondary/10 transition-colors text-brand-text/80 font-medium">
                         <Users className="w-5 h-5" />
                         Utilisateurs

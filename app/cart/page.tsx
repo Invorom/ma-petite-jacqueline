@@ -7,16 +7,34 @@ import { useState, useEffect } from "react";
 import { validatePromo, processCheckout } from "@/app/actions/promo";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function CartPage() {
+import { Suspense } from "react";
+
+function CartContent() {
     const { data: session } = useSession();
     const { cart, removeFromCart, cartTotal, clearCart } = useCart();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     
     const [promoInput, setPromoInput] = useState("");
     const [appliedPromo, setAppliedPromo] = useState<{ code: string, amount: number, type: string } | null>(null);
     const [promoError, setPromoError] = useState("");
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [generatedCodes, setGeneratedCodes] = useState<{code: string, amount: number}[] | null>(null);
+
+    useEffect(() => {
+        if (searchParams?.get("success") === "true") {
+            toast.success("Paiement réussi ! Votre commande est validée.");
+            clearCart();
+            // Optional: You could fetch order details here if you want to show them instead of redirecting
+            router.replace("/account");
+        }
+        if (searchParams?.get("canceled") === "true") {
+            toast.error("Le paiement a été annulé.");
+            router.replace("/cart");
+        }
+    }, [searchParams, clearCart, router]);
 
     useEffect(() => {
         if (appliedPromo && cart.some(item => item.category === "cartes-cadeaux")) {
@@ -43,7 +61,7 @@ export default function CartPage() {
         }
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (payInCash: boolean = false) => {
         if (!session) {
             toast.error("Vous devez être connecté pour valider la commande.");
             return;
@@ -53,15 +71,30 @@ export default function CartPage() {
         
         try {
             const userEmail = session.user?.email || "";
-            const result = await processCheckout(items, appliedPromo?.code, userEmail);
-            if (result.success) {
-                setGeneratedCodes(result.generatedCodes || []);
-                clearCart();
+            
+            if (payInCash && shippingMethod === "CLICK_COLLECT") {
+                // Paiement sur place
+                const result = await processCheckout(items, appliedPromo?.code, userEmail, "PENDING_CASH", shippingMethod, 0);
+                if (result.success) {
+                    toast.success("Commande réservée ! Paiement sur place.");
+                    clearCart();
+                    router.replace("/account");
+                } else {
+                    toast.error("Erreur lors de la réservation");
+                }
             } else {
-                toast.error("Erreur lors de la validation");
+                // Paiement Stripe
+                const { createCheckoutSession } = await import("@/app/actions/stripe");
+                const result = await createCheckoutSession(items, appliedPromo, shippingMethod, userEmail);
+                
+                if (result.url) {
+                    window.location.href = result.url; // Redirection vers Stripe
+                } else {
+                    toast.error(result.error || "Erreur lors de la préparation du paiement");
+                }
             }
         } catch (error) {
-            toast.error("Erreur lors de la validation");
+            toast.error("Erreur inattendue");
         } finally {
             setIsCheckingOut(false);
         }
@@ -104,6 +137,8 @@ export default function CartPage() {
         );
     }
 
+    const [shippingMethod, setShippingMethod] = useState<"HOME" | "CLICK_COLLECT">("HOME");
+
     // Calculer le total éligible aux réductions (tout sauf les cartes cadeaux)
     const eligibleTotal = cart
         .filter(item => item.category !== "cartes-cadeaux")
@@ -115,7 +150,11 @@ export default function CartPage() {
         ? (appliedPromo.type === "PERCENTAGE" ? (eligibleTotal * appliedPromo.amount / 100) : Math.min(appliedPromo.amount, eligibleTotal))
         : 0;
 
-    const finalTotal = Math.max(0, eligibleTotal - discountAmount) + nonEligibleTotal;
+    const subtotal = Math.max(0, eligibleTotal - discountAmount) + nonEligibleTotal;
+    const isFreeShipping = subtotal >= 100;
+    const shippingCost = shippingMethod === "CLICK_COLLECT" || isFreeShipping ? 0 : 4;
+
+    const finalTotal = subtotal + shippingCost;
 
     return (
         <div className="container mx-auto py-16 px-4 h-full overflow-y-auto scroll-smooth">
@@ -206,8 +245,55 @@ export default function CartPage() {
                                 )}
                             </div>
 
+                            {/* Shipping Options */}
+                            <div className="mb-6 border-b border-brand-secondary/10 pb-6">
+                                <h3 className="text-sm font-bold text-brand-text/80 uppercase mb-3">Mode de livraison</h3>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="shipping" 
+                                            value="HOME" 
+                                            checked={shippingMethod === "HOME"}
+                                            onChange={() => setShippingMethod("HOME")}
+                                            className="w-4 h-4 text-brand-secondary"
+                                        />
+                                        <div className="flex-1 flex justify-between text-sm">
+                                            <span className="font-medium">Livraison à domicile</span>
+                                            <span className="font-bold">{isFreeShipping ? "Offerte" : "4.00 €"}</span>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="shipping" 
+                                            value="CLICK_COLLECT" 
+                                            checked={shippingMethod === "CLICK_COLLECT"}
+                                            onChange={() => setShippingMethod("CLICK_COLLECT")}
+                                            className="w-4 h-4 mt-1 text-brand-secondary"
+                                        />
+                                        <div className="flex-1 flex flex-col text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="font-medium">Click & Collect</span>
+                                                <span className="font-bold text-green-600">Gratuit</span>
+                                            </div>
+                                            {shippingMethod === "CLICK_COLLECT" && (
+                                                <span className="text-xs text-brand-text/60 mt-1 italic">
+                                                    Retrait à l'atelier : 19 rue de l'église 80200 ASSEVILLERS
+                                                </span>
+                                            )}
+                                        </div>
+                                    </label>
+                                </div>
+                                {isFreeShipping && shippingMethod === "HOME" && (
+                                    <div className="mt-3 text-xs font-bold text-green-600 bg-green-50 p-2 rounded-lg text-center">
+                                        Livraison offerte car votre commande atteint 100€ ! 🎉
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex justify-between items-end mb-6 text-brand-text">
-                                <span className="font-bold">Total</span>
+                                <span className="font-bold">Total TTC</span>
                                 <span className="font-bold text-2xl text-brand-secondary">{finalTotal.toFixed(2)} €</span>
                             </div>
 
@@ -243,21 +329,48 @@ export default function CartPage() {
                                 </div>
                             ) : null}
 
-                            <button 
-                                onClick={handleCheckout}
-                                disabled={isCheckingOut || !session}
-                                className="w-full py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all shadow-md mb-4 disabled:opacity-50"
-                            >
-                                {isCheckingOut ? "Validation..." : "Valider la commande"}
-                            </button>
+                            {shippingMethod === "CLICK_COLLECT" ? (
+                                <div className="space-y-3 mb-4">
+                                    <button 
+                                        onClick={() => handleCheckout(false)}
+                                        disabled={isCheckingOut || !session}
+                                        className="w-full py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all shadow-md disabled:opacity-50"
+                                    >
+                                        {isCheckingOut ? "Validation..." : "Payer par Carte Bancaire"}
+                                    </button>
+                                    <button 
+                                        onClick={() => handleCheckout(true)}
+                                        disabled={isCheckingOut || !session}
+                                        className="w-full py-4 bg-white border-2 border-brand-secondary text-brand-secondary rounded-xl font-bold hover:bg-brand-light transition-all shadow-sm disabled:opacity-50"
+                                    >
+                                        {isCheckingOut ? "Validation..." : "Réserver et Payer sur place (Espèces)"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => handleCheckout(false)}
+                                    disabled={isCheckingOut || !session}
+                                    className="w-full py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all shadow-md mb-4 disabled:opacity-50"
+                                >
+                                    {isCheckingOut ? "Validation..." : "Payer la commande"}
+                                </button>
+                            )}
 
                             <p className="text-xs text-brand-text/50 text-center">
-                                Paiement fictif (Démo). En validant, vous générez les codes cadeaux.
+                                Paiement sécurisé via Stripe.
                             </p>
                         </div>
                     </div>
                 </div>
             )}
         </div>
+    );
+}
+
+export default function CartPage() {
+    return (
+        <Suspense fallback={<div className="container mx-auto py-16 text-center">Chargement du panier...</div>}>
+            <CartContent />
+        </Suspense>
     );
 }

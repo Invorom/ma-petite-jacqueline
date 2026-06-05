@@ -59,5 +59,10 @@ model Order {
   totalAmount Float
   itemsJson   String   // Stores [{ name, price, category, image }]
   status      String   @default("PAID")
+
+  stripeSessionId String? @unique
+  shippingMethod  String? // "HOME" or "CLICK_COLLECT"
+  shippingCost    Float?  @default(0)
+
   createdAt   DateTime @default(now())
 }

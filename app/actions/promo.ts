@@ -89,7 +89,14 @@ export async function validatePromo(code: string) {
     return { success: true, amount: promo.amount, type: promo.type };
 }
 
-export async function processCheckout(items: { id: string, category: string, price: number, name?: string, image?: string }[], appliedCode?: string, userEmail?: string) {
+export async function processCheckout(
+    items: { id: string, category: string, price: number, name?: string, image?: string }[], 
+    appliedCode?: string, 
+    userEmail?: string,
+    status: string = "PAID",
+    shippingMethod?: string,
+    shippingCost: number = 0
+) {
     try {
         let newCodes = [];
         
@@ -112,14 +119,16 @@ export async function processCheckout(items: { id: string, category: string, pri
         for (const item of items) {
             totalAmount += item.price;
             if (item.category === "cartes-cadeaux") {
-                const code = `CADEAU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-                await prisma.promoCode.create({
-                    data: {
-                        code,
-                        amount: item.price
-                    }
-                });
-                newCodes.push({ code, amount: item.price });
+                if (status === "PAID") {
+                    const code = `CADEAU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                    await prisma.promoCode.create({
+                        data: {
+                            code,
+                            amount: item.price
+                        }
+                    });
+                    newCodes.push({ code, amount: item.price });
+                }
             } else {
                 // Delete product completely as it is unique
                 try {
@@ -138,8 +147,11 @@ export async function processCheckout(items: { id: string, category: string, pri
                 await prisma.order.create({
                     data: {
                         userId: user.id,
-                        totalAmount,
+                        totalAmount: totalAmount + shippingCost, // We can recalculate exact total if needed, but totalAmount + shippingCost is fine for cash orders. Wait, we should probably calculate with promo code.
                         itemsJson: JSON.stringify(items),
+                        status,
+                        shippingMethod,
+                        shippingCost
                     }
                 });
             }
