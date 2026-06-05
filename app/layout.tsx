@@ -6,6 +6,9 @@ import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { CartProvider } from "@/lib/cart-context";
 
+import { SessionProviderWrapper } from "@/app/components/SessionProviderWrapper";
+import { Toaster } from "sonner";
+
 const dancingScript = Dancing_Script({
   subsets: ["latin"],
   variable: "--font-display",
@@ -17,8 +20,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ma petite Jacqueline",
-  description: "Bijoux uniques issus de vaisselle ancienne.",
+  title: {
+    template: "%s | Ma petite Jacqueline",
+    default: "Ma petite Jacqueline - Bijoux uniques en vaisselle ancienne",
+  },
+  description: "Créations uniques et artisanales de bijoux façonnés à partir de vaisselle ancienne de famille. Colliers, boucles d'oreilles et bagues pleines d'histoire.",
+  openGraph: {
+    title: "Ma petite Jacqueline",
+    description: "Bijoux uniques issus de vaisselle ancienne.",
+    url: "https://mapetitejacqueline.fr",
+    siteName: "Ma petite Jacqueline",
+    locale: "fr_FR",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -35,13 +53,18 @@ export default function RootLayout({
           inter.variable
         )}
       >
-        <CartProvider>
-          <Header />
-          <main className="flex-1 overflow-y-auto scroll-smooth">
-            {children}
-          </main>
-          <Footer />
-        </CartProvider>
+        <SessionProviderWrapper>
+          <CartProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1 overflow-hidden flex flex-col">
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Toaster position="bottom-right" richColors />
+          </CartProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

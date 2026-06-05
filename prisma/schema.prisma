@@ -15,6 +15,8 @@ model User {
   role          String    @default("USER") // "ADMIN" or "USER"
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  reviews       Review[]
+  orders        Order[]
 }
 
 model Product {
@@ -22,9 +24,40 @@ model Product {
   name        String
   description String
   price       Float
-  image       String   // URL or path
+  image       String   // Keep this as primary image
+  images      String   @default("[]") // JSON array of additional image URLs
   category    String
   quantity    Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  text      String
+  rating    Int      @default(5)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PromoCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  amount    Float
+  type      String    @default("FIXED") // "FIXED" or "PERCENTAGE"
+  isUsed    Boolean   @default(false)
+  expiresAt DateTime? // Nullable for gift cards without expiration
+  createdAt DateTime  @default(now())
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalAmount Float
+  itemsJson   String   // Stores [{ name, price, category, image }]
+  status      String   @default("PAID")
+  createdAt   DateTime @default(now())
 }

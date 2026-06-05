@@ -3,6 +3,26 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { AddToCartButton } from '@/app/components/AddToCartButton';
+import { ProductGallery } from './ProductGallery';
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params;
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product) return { title: 'Produit introuvable' };
+
+    return {
+        title: product.name,
+        description: product.description.substring(0, 160),
+        openGraph: {
+            title: `${product.name} | Ma petite Jacqueline`,
+            description: product.description.substring(0, 160),
+            images: product.image ? [{ url: product.image }] : [],
+            type: "website",
+        }
+    };
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -15,35 +35,50 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         notFound();
     }
 
+    let parsedImages: string[] = [];
+    try {
+        parsedImages = JSON.parse(product.images || "[]");
+    } catch {
+        // Fallback if parsing fails
+    }
+    // If no multi-images but there's a main image, put it in the array
+    if (parsedImages.length === 0 && product.image) {
+        parsedImages = [product.image];
+    }
+
+    const isGiftCard = product.category === "cartes-cadeaux";
+
     return (
-        <div className="container mx-auto py-12 px-4">
-            <Link href="/shop" className="inline-flex items-center text-sm text-brand-text/60 hover:text-brand-secondary mb-8">
+        <div className="container mx-auto px-4 h-full flex flex-col py-6">
+            <Link href="/shop" className="inline-flex items-center text-sm text-brand-text/60 hover:text-brand-secondary mb-6 flex-none">
                 <ArrowLeft className="w-4 h-4 mr-1" /> Retour à la boutique
             </Link>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {/* Image */}
-                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-xl font-display overflow-hidden">
-                    {product.image && product.image.startsWith('http') ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="text-brand-text/30 bg-brand-light/50 w-full h-full flex items-center justify-center">
-                            {product.image || "Image du Produit"}
-                        </span>
-                    )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 flex-1 min-h-0">
+                {/* Image Gallery */}
+                <div className="h-[40vh] md:h-full">
+                    <ProductGallery images={parsedImages} isGiftCard={isGiftCard} />
                 </div>
 
                 {/* Details */}
-                <div className="space-y-6">
-                    <h1 className="font-display text-4xl text-brand-secondary">{product.name}</h1>
-                    <p className="text-2xl font-bold text-brand-text">{product.price} €</p>
+                <div className="flex flex-col justify-center space-y-6 h-full overflow-y-auto pr-4 custom-scrollbar">
+                    <div>
+                        <p className="text-sm font-bold text-brand-text/50 uppercase tracking-wider mb-2">{product.category.replace("-", " ")}</p>
+                        <h1 className="font-display text-4xl md:text-5xl text-brand-secondary leading-tight">{product.name}</h1>
+                    </div>
+                    
+                    <p className="text-3xl font-bold text-brand-text">{product.price.toFixed(2)} €</p>
 
-                    <div className="prose prose-stone text-brand-text/80">
-                        <p>{product.description}</p>
-                        <p className="text-sm italic mt-4">Pièce unique, quantité : {product.quantity}</p>
+                    <div className="prose prose-stone text-brand-text/80 leading-relaxed bg-white p-6 rounded-2xl shadow-sm border border-brand-secondary/10">
+                        <p className="whitespace-pre-wrap">{product.description}</p>
                     </div>
 
-                    <AddToCartButton product={product} />
+                    <div className="pt-4 border-t border-brand-secondary/10 flex-none">
+                        <p className="text-sm italic text-brand-text/60 mb-4">
+                            {isGiftCard ? "Carte cadeau dématérialisée" : "Pièce artisanale unique, façonnée à la main."}
+                        </p>
+                        <AddToCartButton product={product} />
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingBag, User, Menu } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -18,12 +19,16 @@ export function Header() {
                 </button>
 
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2">
-                    <span className="font-display text-4xl text-brand-secondary">Ma petite Jacqueline</span>
+                <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                    <Image src="/logo_jacqueline.png" alt="Logo" width={48} height={48} className="object-contain drop-shadow-sm" />
+                    <span className="font-display text-3xl md:text-4xl text-brand-secondary mt-1">Ma petite Jacqueline</span>
                 </Link>
 
                 {/* Desktop Navigation */}
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-brand-text">
+                    <Link href="/livre-d-or" className="hover:text-brand-secondary transition-colors">
+                        Livre d'or
+                    </Link>
                     <Link href="/vaisselle-de-famille" className="hover:text-brand-secondary transition-colors">
                         Projet "Vaisselle de famille"
                     </Link>

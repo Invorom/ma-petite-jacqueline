@@ -6,5 +6,5 @@ export const categories = [
   { id: 'broches', name: 'Broches' },
   { id: 'accessoires', name: 'Accessoires & Déco' },
   { id: 'parures', name: 'Parures' },
-  { id: 'carte-cadeaux', name: 'Carte Cadeaux' },
+  { id: 'cartes-cadeaux', name: 'Cartes Cadeaux' },
 ];
