@@ -47,6 +47,8 @@ export async function POST(req: Request) {
                 } catch(e) {}
             }
 
+            let giftCardCodes: {code: string, amount: number}[] = [];
+
             // 2. Process items (generate new gift cards, delete unique physical items)
             for (const item of items) {
                 if (item.category === "cartes-cadeaux") {
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
                             amount: item.price
                         }
                     });
-                    // Note: Ideally we send an email with the code here
+                    giftCardCodes.push({ code, amount: item.price });
                 } else {
                     try {
                         await prisma.product.delete({
@@ -68,10 +70,11 @@ export async function POST(req: Request) {
             }
 
             // 3. Create Order
+            let createdOrder;
             if (userEmail) {
                 const user = await prisma.user.findUnique({ where: { email: userEmail } });
                 if (user) {
-                    await prisma.order.create({
+                    createdOrder = await prisma.order.create({
                         data: {
                             userId: user.id,
                             totalAmount: (session.amount_total || 0) / 100, // Stripe uses cents
@@ -80,6 +83,34 @@ export async function POST(req: Request) {
                             shippingMethod,
                             shippingCost
                         }
+                    });
+                }
+            }
+
+            // 4. Send Emails via Resend
+            if (userEmail && createdOrder) {
+                const { resend, SENDER_EMAIL } = await import("@/lib/email");
+                const OrderConfirmationEmail = (await import("@/emails/OrderConfirmation")).default;
+                
+                await resend.emails.send({
+                    from: SENDER_EMAIL,
+                    to: userEmail,
+                    subject: "Confirmation de votre commande - Ma Petite Jacqueline",
+                    react: OrderConfirmationEmail({
+                        orderId: createdOrder.id,
+                        items,
+                        total: createdOrder.totalAmount,
+                        shippingMethod: createdOrder.shippingMethod || "HOME"
+                    })
+                });
+
+                if (giftCardCodes.length > 0) {
+                    const GiftCardEmail = (await import("@/emails/GiftCardEmail")).default;
+                    await resend.emails.send({
+                        from: SENDER_EMAIL,
+                        to: userEmail,
+                        subject: "Vos Cartes Cadeaux 🎁 - Ma Petite Jacqueline",
+                        react: GiftCardEmail({ codes: giftCardCodes })
                     });
                 }
             }

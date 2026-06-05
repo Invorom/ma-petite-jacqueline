@@ -42,9 +42,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart((prev) => {
             const existing = prev.find((item) => item.id === product.id);
             if (existing) {
-                return prev.map((item) =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-                );
+                // Pièce unique : on ne peut pas ajouter le même produit deux fois
+                return prev;
             }
             return [...prev, { ...product, quantity: 1 }];
         });

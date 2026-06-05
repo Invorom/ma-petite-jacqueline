@@ -12,8 +12,8 @@ export default async function AdminOrdersPage() {
 
     // Grouping logic
     const toShip = orders.filter(o => o.status === "PAID" && o.shippingMethod === "HOME");
-    const clickAndCollect = orders.filter(o => (o.status === "PAID" || o.status === "PENDING_CASH") && o.shippingMethod === "CLICK_COLLECT");
-    const completed = orders.filter(o => o.status === "SHIPPED" || o.status === "COMPLETED_CASH");
+    const clickAndCollect = orders.filter(o => (o.status === "PAID" || o.status === "PENDING_CASH" || o.status === "READY_FOR_PICKUP") && o.shippingMethod === "CLICK_COLLECT");
+    const completed = orders.filter(o => o.status === "SHIPPED" || o.status === "COMPLETED_CASH" || o.status === "COMPLETED");
 
     return (
         <div>
@@ -96,6 +96,10 @@ function OrderCard({ order }: { order: any }) {
                         {order.status === "PENDING_CASH" ? (
                             <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-md mt-1 inline-block">
                                 À encaisser sur place
+                            </span>
+                        ) : order.status === "READY_FOR_PICKUP" ? (
+                            <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-md mt-1 inline-block">
+                                Prête à l'atelier
                             </span>
                         ) : order.status === "COMPLETED_CASH" ? (
                             <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md mt-1 inline-block">

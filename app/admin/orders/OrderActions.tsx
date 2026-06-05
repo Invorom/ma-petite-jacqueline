@@ -45,19 +45,37 @@ export default function OrderActions({ orderId, currentStatus, shippingMethod }:
     }
 
     if (shippingMethod === "CLICK_COLLECT") {
-        return (
-            <div className="flex flex-col justify-center h-full gap-2">
-                <p className="text-sm font-medium text-brand-text/60 mb-2">Action requise :</p>
-                <button 
-                    onClick={() => handleUpdate("COMPLETED_CASH", "Commande marquée comme récupérée !")}
-                    disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-all disabled:opacity-50 text-sm"
-                >
-                    <Package className="w-4 h-4" />
-                    {isLoading ? "..." : "Commande Récupérée"}
-                </button>
-            </div>
-        );
+        if (currentStatus === "PAID" || currentStatus === "PENDING_CASH") {
+            return (
+                <div className="flex flex-col justify-center h-full gap-2">
+                    <p className="text-sm font-medium text-brand-text/60 mb-2">Action requise :</p>
+                    <button 
+                        onClick={() => handleUpdate("READY_FOR_PICKUP", "Commande marquée comme prête ! Le client a été notifié.")}
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary transition-all disabled:opacity-50 text-sm"
+                    >
+                        <Package className="w-4 h-4" />
+                        {isLoading ? "..." : "Marquer comme prête"}
+                    </button>
+                </div>
+            );
+        }
+
+        if (currentStatus === "READY_FOR_PICKUP") {
+            return (
+                <div className="flex flex-col justify-center h-full gap-2">
+                    <p className="text-sm font-medium text-brand-text/60 mb-2">Statut : Prête à l'atelier</p>
+                    <button 
+                        onClick={() => handleUpdate("COMPLETED_CASH", "Commande marquée comme récupérée !")}
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-all disabled:opacity-50 text-sm"
+                    >
+                        <Check className="w-4 h-4" />
+                        {isLoading ? "..." : "Commande Récupérée"}
+                    </button>
+                </div>
+            );
+        }
     }
 
     return null;
