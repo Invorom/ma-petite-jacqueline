@@ -5,8 +5,29 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { SessionProvider } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Package, Lock, LogOut } from "lucide-react";
+import { Package, Lock, LogOut, Truck, Clock, CheckCircle, Store } from "lucide-react";
 import { changePassword, getUserOrders } from "@/app/actions/user";
+
+function OrderStatusBadge({ status, shippingMethod }: { status: string, shippingMethod?: string }) {
+    switch (status) {
+        case "PAID":
+            if (shippingMethod === "HOME") {
+                return <span className="inline-flex items-center gap-1 text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full"><Truck className="w-3 h-3" /> En préparation</span>;
+            }
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full"><Clock className="w-3 h-3" /> En préparation</span>;
+        case "PENDING_CASH":
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-orange-100 text-orange-700 px-3 py-1 rounded-full"><Clock className="w-3 h-3" /> À régler sur place</span>;
+        case "READY_FOR_PICKUP":
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full"><Store className="w-3 h-3" /> Prête à récupérer !</span>;
+        case "SHIPPED":
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full"><Truck className="w-3 h-3" /> Expédiée</span>;
+        case "COMPLETED_CASH":
+        case "COMPLETED":
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full"><CheckCircle className="w-3 h-3" /> Terminée</span>;
+        default:
+            return <span className="inline-flex items-center gap-1 text-xs font-bold bg-gray-100 text-gray-700 px-3 py-1 rounded-full">{status}</span>;
+    }
+}
 
 function AccountContent() {
     const { data: session } = useSession();
@@ -93,8 +114,8 @@ function AccountContent() {
 
     if (session) {
         return (
-            <div className="w-full max-w-4xl bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-brand-secondary/10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-brand-secondary/10 flex flex-col overflow-hidden">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h1 className="font-display text-4xl text-brand-secondary mb-2">Mon Espace</h1>
                         <p className="text-brand-text/80 font-serif">
@@ -116,16 +137,16 @@ function AccountContent() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
                     {/* Commandes Section */}
-                    <div className="bg-brand-light/30 p-6 rounded-2xl border border-brand-secondary/10 flex flex-col">
+                    <div className="bg-brand-light/30 p-4 rounded-2xl border border-brand-secondary/10 flex flex-col overflow-hidden">
                         <div className="flex items-center gap-3 mb-6 border-b border-brand-secondary/10 pb-4">
                             <div className="p-3 bg-brand-secondary/10 rounded-full text-brand-secondary">
                                 <Package className="w-6 h-6" />
                             </div>
                             <h2 className="font-display text-2xl text-brand-secondary">Mes Commandes</h2>
                         </div>
-                        <div className="flex-grow flex flex-col p-2 space-y-4 max-h-[400px] overflow-y-auto">
+                        <div className="flex-1 flex flex-col p-2 space-y-3 overflow-y-auto">
                             {orders.length === 0 ? (
                                 <div className="text-center p-6 text-brand-text/60 italic font-serif my-auto">
                                     <p>Vous n'avez aucune commande en cours.</p>
@@ -136,13 +157,33 @@ function AccountContent() {
                                     const items = JSON.parse(order.itemsJson || "[]");
                                     return (
                                         <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-brand-secondary/10 text-sm">
-                                            <div className="flex justify-between items-center mb-2 border-b border-brand-secondary/10 pb-2">
-                                                <span className="font-bold text-brand-secondary">
-                                                    {new Date(order.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                                </span>
-                                                <span className="font-bold text-brand-text">{order.totalAmount.toFixed(2)} €</span>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <span className="font-bold text-brand-secondary block">
+                                                        Commande #{order.id.substring(order.id.length - 8).toUpperCase()}
+                                                    </span>
+                                                    <span className="text-xs text-brand-text/50">
+                                                        {new Date(order.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                                    </span>
+                                                </div>
+                                                <span className="font-bold text-brand-secondary text-lg">{order.totalAmount.toFixed(2)} €</span>
                                             </div>
-                                            <div className="space-y-2 mt-2">
+
+                                            {/* Status Badge */}
+                                            <div className="mb-3">
+                                                <OrderStatusBadge status={order.status} shippingMethod={order.shippingMethod} />
+                                            </div>
+
+                                            {/* Shipping Info */}
+                                            {order.shippingMethod && (
+                                                <p className="text-xs text-brand-text/60 mb-3">
+                                                    {order.shippingMethod === "HOME" ? "📦 Livraison à domicile" : "🏠 Retrait à l'atelier (Click & Collect)"}
+                                                    {order.shippingCost > 0 && ` — Frais de port : ${order.shippingCost.toFixed(2)} €`}
+                                                </p>
+                                            )}
+
+                                            {/* Items */}
+                                            <div className="space-y-1 border-t border-brand-secondary/10 pt-2">
                                                 {items.map((item: any, idx: number) => (
                                                     <div key={idx} className="flex justify-between items-center text-brand-text/80">
                                                         <span>{item.name || "Produit"}</span>
@@ -294,7 +335,7 @@ function AccountContent() {
 
 export default function AccountPage() {
     return (
-        <div className="container mx-auto py-8 px-4 flex justify-center h-full items-center">
+        <div className="container mx-auto py-6 px-4 flex justify-center flex-1 overflow-hidden">
             <SessionProvider>
                 <AccountContent />
             </SessionProvider>

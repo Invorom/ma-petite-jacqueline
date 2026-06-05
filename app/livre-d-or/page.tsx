@@ -94,7 +94,7 @@ export default async function LivreDOrPage(
                         </div>
                         
                         {totalPages > 1 && (
-                            <div className="mt-8 flex justify-center flex-none">
+                            <div className="mt-4 pb-2 flex justify-center flex-none">
                                 <Pagination currentPage={page} totalPages={totalPages} baseUrl="/livre-d-or" />
                             </div>
                         )}

@@ -21,7 +21,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
         if (order.user?.email && (newStatus === "SHIPPED" || newStatus === "READY_FOR_PICKUP" || newStatus === "COMPLETED" || newStatus === "COMPLETED_CASH")) {
             try {
                 const { resend, SENDER_EMAIL } = await import("@/lib/email");
-                const OrderStatusEmail = (await import("@/emails/OrderStatusEmail")).default;
+                const { orderStatusHtml } = await import("@/lib/email-templates");
 
                 let subject = "";
                 if (newStatus === "SHIPPED") subject = "📦 Votre commande est en route ! - Ma Petite Jacqueline";
@@ -32,10 +32,9 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
                     from: SENDER_EMAIL,
                     to: order.user.email,
                     subject,
-                    react: OrderStatusEmail({
+                    html: orderStatusHtml({
                         orderId: order.id,
-                        status: newStatus,
-                        shippingMethod: order.shippingMethod || "HOME"
+                        status: newStatus
                     })
                 });
             } catch (emailError) {

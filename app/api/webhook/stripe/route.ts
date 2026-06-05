@@ -89,29 +89,32 @@ export async function POST(req: Request) {
 
             // 4. Send Emails via Resend
             if (userEmail && createdOrder) {
-                const { resend, SENDER_EMAIL } = await import("@/lib/email");
-                const OrderConfirmationEmail = (await import("@/emails/OrderConfirmation")).default;
-                
-                await resend.emails.send({
-                    from: SENDER_EMAIL,
-                    to: userEmail,
-                    subject: "Confirmation de votre commande - Ma Petite Jacqueline",
-                    react: OrderConfirmationEmail({
-                        orderId: createdOrder.id,
-                        items,
-                        total: createdOrder.totalAmount,
-                        shippingMethod: createdOrder.shippingMethod || "HOME"
-                    })
-                });
-
-                if (giftCardCodes.length > 0) {
-                    const GiftCardEmail = (await import("@/emails/GiftCardEmail")).default;
+                try {
+                    const { resend, SENDER_EMAIL } = await import("@/lib/email");
+                    const { orderConfirmationHtml, giftCardHtml } = await import("@/lib/email-templates");
+                    
                     await resend.emails.send({
                         from: SENDER_EMAIL,
                         to: userEmail,
-                        subject: "Vos Cartes Cadeaux 🎁 - Ma Petite Jacqueline",
-                        react: GiftCardEmail({ codes: giftCardCodes })
+                        subject: "Confirmation de votre commande - Ma Petite Jacqueline",
+                        html: orderConfirmationHtml({
+                            orderId: createdOrder.id,
+                            items,
+                            total: createdOrder.totalAmount,
+                            shippingMethod: createdOrder.shippingMethod || "HOME"
+                        })
                     });
+
+                    if (giftCardCodes.length > 0) {
+                        await resend.emails.send({
+                            from: SENDER_EMAIL,
+                            to: userEmail,
+                            subject: "Vos Cartes Cadeaux 🎁 - Ma Petite Jacqueline",
+                            html: giftCardHtml({ codes: giftCardCodes })
+                        });
+                    }
+                } catch (emailError) {
+                    console.warn("Email non envoyé (Resend non configuré ?):", emailError);
                 }
             }
         } catch (error) {
