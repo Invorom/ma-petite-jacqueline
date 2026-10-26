@@ -30,11 +30,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - name: Report high-severity dependencies (known Prisma tooling debt)
-        continue-on-error: true
-        run: npm audit --omit=dev --audit-level=high
-      - name: Block critical dependency vulnerabilities
-        run: npm audit --omit=dev --audit-level=critical
+      - name: Block high and critical dependency vulnerabilities
+        run: npm audit --audit-level=high
   container:
     runs-on: ubuntu-latest
     timeout-minutes: 25

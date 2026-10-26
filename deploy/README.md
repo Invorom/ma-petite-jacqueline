@@ -52,7 +52,7 @@ La route `/api/health` teste la connexion a la base sans publier les secrets ni 
 Creer le compte de la proprietaire depuis `/account`, puis depuis le serveur, apres verification de l'adresse :
 
 ```sh
-docker compose --env-file .env.production exec app node --input-type=module -e 'import { PrismaClient } from "@prisma/client"; const db = new PrismaClient(); await db.user.update({where:{email:process.argv[1]},data:{role:"ADMIN"}}); await db.$disconnect();' proprietaire@example.com
+docker compose --env-file .env.production exec app node --input-type=module -e 'import { PrismaClient } from "@prisma/client"; import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"; const db = new PrismaClient({adapter:new PrismaBetterSqlite3({url:process.env.DATABASE_URL},{timestampFormat:"unixepoch-ms"})}); await db.user.update({where:{email:process.argv[1]},data:{role:"ADMIN"}}); await db.$disconnect();' proprietaire@example.com
 ```
 
 Cette commande ne cree pas de compte ni de mot de passe. Ne jamais promouvoir une adresse qui n'a pas ete verifiee avec la proprietaire. Ne pas ouvrir Prisma Studio publiquement.
@@ -78,7 +78,7 @@ Tester la restauration sur un serveur isole : arreter l'application, restaurer l
 
 ## Mises a jour et CI
 
-La CI GitHub verifie lint, types, tests, migrations, build Next.js, audit des dependances runtime, construction Docker, configuration Caddy et demarrage avec volumes. L'audit bloque les alertes critiques ; les alertes elevees sont affichees dans une etape non bloquante en raison des trois alertes connues de l'outillage Prisma (egalement present pour les migrations dans l'image). Ce compromis doit etre accepte avant production ; une CI verte ne signifie pas absence de vulnerabilites. Attendre le vert et examiner les avertissements avant de deployer. Elle ne deploye pas automatiquement et ne possede aucun secret de production.
+La CI GitHub verifie lint, types, tests, migrations, build Next.js, audit de toutes les dependances, construction Docker, configuration Caddy et demarrage avec volumes. L'audit bloque les alertes elevees et critiques sans exception Prisma depuis la migration vers 7.10.1. Attendre le vert et examiner les avertissements avant de deployer. Elle ne deploye pas automatiquement et ne possede aucun secret de production.
 
 Apres sauvegarde et CI verte : `git pull --ff-only`, puis `docker compose --env-file .env.production up -d --build`. Verifier la sante et une page de boutique. Les migrations ne sont pas automatiquement reversibles ; une ancienne image peut etre incompatible avec un schema plus recent. Ne jamais lancer un reset de base pour reparer un deploiement.
 

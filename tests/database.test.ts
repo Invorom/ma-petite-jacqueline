@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { databaseUrl } from "@/lib/database-url.mjs";
 
 let directory: string;
 let prisma: typeof import("@/lib/prisma").prisma;
@@ -43,4 +44,27 @@ it("allows only one concurrent reservation and restores stock once", async () =>
     await releaseOrder(order.id, "PENDING_CASH");
     await releaseOrder(order.id, "PENDING_CASH");
     expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).quantity).toBe(1);
+});
+
+it("reads and writes legacy Prisma 6 millisecond timestamps", async () => {
+    const timestamp = Date.UTC(2025, 0, 15, 12);
+    await prisma.$executeRaw`INSERT INTO "PromoCode" ("id", "code", "amount", "type", "isUsed", "expiresAt", "createdAt") VALUES ('legacy-date', 'LEGACY-DATE', 10, 'FIXED', false, ${timestamp}, ${timestamp})`;
+    const promo = await prisma.promoCode.findUniqueOrThrow({ where: { code: "LEGACY-DATE" } });
+    expect(promo.expiresAt?.getTime()).toBe(timestamp);
+    expect(promo.createdAt.getTime()).toBe(timestamp);
+    await prisma.promoCode.update({ where: { id: promo.id }, data: { expiresAt: new Date(timestamp + 1000) } });
+    const rows = await prisma.$queryRaw<{ storage: string }[]>`SELECT typeof("expiresAt") AS storage FROM "PromoCode" WHERE "id" = 'legacy-date'`;
+    expect(rows[0].storage).toBe("integer");
+});
+
+it("keeps relative SQLite URLs in the existing prisma directory", () => {
+    const original = process.env.DATABASE_URL;
+    try {
+        process.env.DATABASE_URL = "file:./dev.db";
+        expect(databaseUrl()).toBe(`file:${resolve("prisma/dev.db").replaceAll("\\", "/")}`);
+        process.env.DATABASE_URL = original;
+        expect(databaseUrl()).toBe(original);
+    } finally {
+        process.env.DATABASE_URL = original;
+    }
 });
