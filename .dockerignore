@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+.next
+.env
+.env.*
+prisma/*.db
+prisma/*.db-*
+public/uploads
+coverage
+*.tsbuildinfo
+*.pem
+*.key
+backups
+tests

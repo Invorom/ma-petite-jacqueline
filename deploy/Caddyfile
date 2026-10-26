@@ -1,0 +1,23 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+    request_body {
+        max_size 25MB
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        -Server
+    }
+    handle_path /uploads/* {
+        root * /srv/uploads
+        file_server
+    }
+    handle {
+        reverse_proxy app:3000 {
+            header_up X-Shop-Client-IP {remote_host}
+        }
+    }
+}
