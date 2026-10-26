@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { SessionProvider } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Package, Lock, LogOut, Truck, Clock, CheckCircle, Store } from "lucide-react";
@@ -10,6 +9,10 @@ import { changePassword, getUserOrders } from "@/app/actions/user";
 
 function OrderStatusBadge({ status, shippingMethod }: { status: string, shippingMethod?: string }) {
     switch (status) {
+        case "PENDING_PAYMENT":
+            return <span className="text-xs">Paiement en attente de confirmation</span>;
+        case "CANCELED":
+            return <span className="text-xs">Commande annulée</span>;
         case "PAID":
             if (shippingMethod === "HOME") {
                 return <span className="inline-flex items-center gap-1 text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full"><Truck className="w-3 h-3" /> En préparation</span>;
@@ -36,13 +39,13 @@ function AccountContent() {
     const [error, setError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [passwordSuccess, setPasswordSuccess] = useState("");
-    const [orders, setOrders] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Awaited<ReturnType<typeof getUserOrders>>>([]);
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
     useEffect(() => {
         if (session?.user) {
-            getUserOrders().then(setOrders);
+            getUserOrders().then(setOrders).catch(() => setError("Impossible de charger les commandes."));
         }
     }, [session]);
 
@@ -77,18 +80,25 @@ function AccountContent() {
                 });
 
                 if (res.ok) {
-                    await signIn("credentials", {
+                    const result = await signIn("credentials", {
                         redirect: false,
                         email,
                         password,
                     });
+                    if (result?.error) {
+                        setIsLogin(true);
+                        setError("Compte créé. Connectez-vous pour continuer.");
+                        return;
+                    }
                     router.refresh();
                 } else {
                     const data = await res.json();
                     setError(data.message || "Erreur lors de l'inscription.");
                 }
-            } catch (err) {
+            } catch {
                 setError("Une erreur est survenue.");
+            } finally {
+                setIsLoading(false);
             }
         }
         setIsLoading(false);
@@ -104,17 +114,18 @@ function AccountContent() {
         startTransition(async () => {
             try {
                 await changePassword(formData);
-                setPasswordSuccess("Mot de passe modifié avec succès !");
+                setPasswordSuccess("Mot de passe modifié. Reconnectez-vous avec le nouveau mot de passe.");
                 form.reset();
-            } catch (err: any) {
-                setPasswordError(err.message || "Une erreur est survenue.");
+                await signOut({ redirect: false });
+            } catch (err) {
+                setPasswordError(err instanceof Error ? err.message : "Une erreur est survenue.");
             }
         });
     };
 
     if (session) {
         return (
-            <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-brand-secondary/10 flex flex-col overflow-hidden">
+            <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-brand-secondary/10 flex flex-col">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h1 className="font-display text-4xl text-brand-secondary mb-2">Mon Espace</h1>
@@ -123,7 +134,7 @@ function AccountContent() {
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        {(session.user as any)?.role === "ADMIN" && (
+                        {session.user?.role === "ADMIN" && (
                             <Link href="/admin" className="flex items-center gap-2 px-6 py-2 border border-brand-primary text-brand-primary rounded-full hover:bg-brand-primary hover:text-white transition-colors text-sm font-medium">
                                 Administration
                             </Link>
@@ -137,9 +148,9 @@ function AccountContent() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Commandes Section */}
-                    <div className="bg-brand-light/30 p-4 rounded-2xl border border-brand-secondary/10 flex flex-col overflow-hidden">
+                    <div className="bg-brand-light/30 p-4 rounded-2xl border border-brand-secondary/10 flex flex-col">
                         <div className="flex items-center gap-3 mb-6 border-b border-brand-secondary/10 pb-4">
                             <div className="p-3 bg-brand-secondary/10 rounded-full text-brand-secondary">
                                 <Package className="w-6 h-6" />
@@ -149,7 +160,7 @@ function AccountContent() {
                         <div className="flex-1 flex flex-col p-2 space-y-3 overflow-y-auto">
                             {orders.length === 0 ? (
                                 <div className="text-center p-6 text-brand-text/60 italic font-serif my-auto">
-                                    <p>Vous n'avez aucune commande en cours.</p>
+                                    <p>Vous n&apos;avez aucune commande en cours.</p>
                                     <p className="text-sm mt-2">Lorsque vous passerez commande, le suivi apparaîtra ici.</p>
                                 </div>
                             ) : (
@@ -171,20 +182,27 @@ function AccountContent() {
 
                                             {/* Status Badge */}
                                             <div className="mb-3">
-                                                <OrderStatusBadge status={order.status} shippingMethod={order.shippingMethod} />
+                                                <OrderStatusBadge status={order.status} shippingMethod={order.shippingMethod || undefined} />
+                                                {order.paymentMethod === "CASH" && order.status === "READY_FOR_PICKUP" && <p className="text-xs mt-1">Paiement à effectuer au retrait.</p>}
                                             </div>
+                                            {JSON.parse(order.giftCodesJson || "[]").map((gift: { code: string; amount: number }) => (
+                                                <div key={gift.code} className="my-2 border p-2 rounded break-all">
+                                                    <p>Carte cadeau : {gift.amount.toFixed(2)} €</p>
+                                                    <code className="text-xs select-all">{gift.code}</code>
+                                                </div>
+                                            ))}
 
                                             {/* Shipping Info */}
                                             {order.shippingMethod && (
                                                 <p className="text-xs text-brand-text/60 mb-3">
                                                     {order.shippingMethod === "HOME" ? "📦 Livraison à domicile" : "🏠 Retrait à l'atelier (Click & Collect)"}
-                                                    {order.shippingCost > 0 && ` — Frais de port : ${order.shippingCost.toFixed(2)} €`}
+                                                    {(order.shippingCost || 0) > 0 && ` — Frais de port : ${order.shippingCost?.toFixed(2)} €`}
                                                 </p>
                                             )}
 
                                             {/* Items */}
                                             <div className="space-y-1 border-t border-brand-secondary/10 pt-2">
-                                                {items.map((item: any, idx: number) => (
+                                                {items.map((item: { name?: string; price: number }, idx: number) => (
                                                     <div key={idx} className="flex justify-between items-center text-brand-text/80">
                                                         <span>{item.name || "Produit"}</span>
                                                         <span>{item.price.toFixed(2)} €</span>
@@ -234,7 +252,8 @@ function AccountContent() {
                                     name="newPassword"
                                     type="password"
                                     required
-                                    minLength={6}
+                                    minLength={12}
+                                    maxLength={72}
                                     className="w-full mt-1 px-4 py-2 rounded-xl border border-brand-secondary/20 focus:outline-none focus:ring-2 focus:ring-brand-secondary/50 bg-white"
                                 />
                             </div>
@@ -244,7 +263,8 @@ function AccountContent() {
                                     name="confirmPassword"
                                     type="password"
                                     required
-                                    minLength={6}
+                                    minLength={12}
+                                    maxLength={72}
                                     className="w-full mt-1 px-4 py-2 rounded-xl border border-brand-secondary/20 focus:outline-none focus:ring-2 focus:ring-brand-secondary/50 bg-white"
                                 />
                             </div>
@@ -303,7 +323,8 @@ function AccountContent() {
                         name="password"
                         type="password"
                         required
-                        minLength={6}
+                        minLength={isLogin ? 6 : 12}
+                        maxLength={72}
                         className="w-full mt-1 px-4 py-3 rounded-xl border border-brand-secondary/20 focus:outline-none focus:ring-2 focus:ring-brand-secondary/50 bg-brand-light/30"
                     />
                 </div>
@@ -335,10 +356,8 @@ function AccountContent() {
 
 export default function AccountPage() {
     return (
-        <div className="container mx-auto py-6 px-4 flex justify-center flex-1 overflow-hidden">
-            <SessionProvider>
-                <AccountContent />
-            </SessionProvider>
+        <div className="container mx-auto py-6 px-4 flex flex-col items-center flex-1 overflow-y-auto">
+            <AccountContent />
         </div>
     );
 }

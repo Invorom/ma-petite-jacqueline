@@ -1,6 +1,6 @@
 import { Html, Body, Container, Section, Text, Heading, Hr } from "@react-email/components";
 
-export default function OrderConfirmationEmail({ orderId, items, total, shippingMethod }: { orderId: string, items: any[], total: number, shippingMethod: string }) {
+export default function OrderConfirmationEmail({ orderId, items, total, shippingMethod }: { orderId: string, items: { name?: string; category: string; price: number }[], total: number, shippingMethod: string }) {
     return (
         <Html>
             <Body style={{ backgroundColor: "#F7EFE5", fontFamily: "sans-serif", padding: "40px 0" }}>
@@ -36,7 +36,7 @@ export default function OrderConfirmationEmail({ orderId, items, total, shipping
 
                     {shippingMethod === "CLICK_COLLECT" && (
                         <Text style={{ color: "#3B2A20", fontSize: "14px" }}>
-                            Nous préparons votre commande. Vous recevrez un e-mail dès qu'elle sera prête à être récupérée à l'atelier !
+                            Nous préparons votre commande. Vous recevrez un e-mail dès qu&apos;elle sera prête à être récupérée à l&apos;atelier !
                         </Text>
                     )}
 

@@ -6,8 +6,9 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { categories } from "@/lib/products";
+import type { Product } from "@prisma/client";
 
-export function EditProductForm({ product }: { product: any }) {
+export function EditProductForm({ product }: { product: Product }) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -60,7 +61,7 @@ export function EditProductForm({ product }: { product: any }) {
             </div>
 
             <div>
-                <label className="block text-sm font-bold text-brand-secondary mb-1">Description (L'histoire de la pièce)</label>
+                <label className="block text-sm font-bold text-brand-secondary mb-1">Description (L&apos;histoire de la pièce)</label>
                 <textarea required name="description" rows={5} defaultValue={product.description} className="w-full border rounded-lg p-2 bg-brand-light/20"></textarea>
             </div>
 

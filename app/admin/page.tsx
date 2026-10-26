@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
 import { Package, Users, Star, ShoppingBag, Truck, Store, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export default async function AdminOverviewPage() {
+    await requireAdmin();
     const [userCount, productCount, reviewCount, promoCount, orders] = await Promise.all([
         prisma.user.count(),
         prisma.product.count(),
@@ -20,14 +22,15 @@ export default async function AdminOverviewPage() {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
     const ordersThisMonth = orders.filter(o => o.createdAt >= firstDayOfMonth);
-    const revenueThisMonth = ordersThisMonth.filter(o => o.status === "PAID" || o.status === "SHIPPED" || o.status === "COMPLETED_CASH").reduce((sum, o) => sum + o.totalAmount, 0);
-    const paidOrdersThisMonthCount = ordersThisMonth.filter(o => o.status === "PAID" || o.status === "SHIPPED" || o.status === "COMPLETED_CASH").length;
+    const paidOrders = ordersThisMonth.filter(order => ["PAID", "SHIPPED", "COMPLETED", "COMPLETED_CASH"].includes(order.status) || (order.status === "READY_FOR_PICKUP" && order.paymentMethod === "CARD"));
+    const revenueThisMonth = paidOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const paidOrdersThisMonthCount = paidOrders.length;
 
     const currentMonthName = format(now, "MMMM", { locale: fr });
 
     return (
         <div>
-            <h1 className="font-display text-4xl text-brand-secondary mb-8">Vue d'ensemble</h1>
+            <h1 className="font-display text-4xl text-brand-secondary mb-8">Vue d&apos;ensemble</h1>
 
             {/* Alert Section for Orders */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

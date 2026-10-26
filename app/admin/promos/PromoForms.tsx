@@ -75,7 +75,7 @@ export function PromoCodeForm() {
                 </div>
             </div>
             <div>
-                <label className="text-xs font-bold text-brand-text/80 uppercase">Date d'expiration (optionnelle)</label>
+                <label className="text-xs font-bold text-brand-text/80 uppercase">Date d&apos;expiration (optionnelle)</label>
                 <input type="date" name="expiresAt" className="w-full mt-1 px-4 py-2 border rounded-xl" />
             </div>
             <button disabled={isPending} className="w-full flex items-center justify-center gap-2 py-3 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all mt-4 disabled:opacity-50">

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
 import { ProductForm } from "./ProductForm";
 import Image from "next/image";
 import { deleteProduct } from "@/app/actions/product";
@@ -8,7 +9,9 @@ import { Pagination } from "@/app/components/Pagination";
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
     const { page } = await searchParams;
-    const currentPage = parseInt(page || '1', 10);
+    await requireAdmin();
+    const parsedPage = Number(page || "1");
+    const currentPage = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, 10000) : 1;
     const PAGE_SIZE = 5;
     const skip = (currentPage - 1) * PAGE_SIZE;
 

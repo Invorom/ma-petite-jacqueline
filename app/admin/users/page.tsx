@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
 import { RoleToggle } from "./RoleToggle";
 
 export default async function AdminUsersPage() {
+    await requireAdmin();
     const users = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' }
     });

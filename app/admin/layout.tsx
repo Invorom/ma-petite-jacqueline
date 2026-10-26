@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Package, Users, LayoutDashboard, MessageSquare } from "lucide-react";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/authorization";
 import { redirect } from "next/navigation";
 
 export default async function AdminLayout({
@@ -8,22 +8,22 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const session = await auth();
-
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    try {
+        await requireAdmin();
+    } catch {
         redirect("/");
     }
 
     return (
-        <div className="flex h-full overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Sidebar */}
-            <aside className="w-64 bg-brand-secondary/5 border-r border-brand-secondary/10 hidden md:block">
-                <nav className="p-6 flex flex-col gap-2">
-                    <h2 className="font-display text-2xl text-brand-secondary mb-6">Administration</h2>
+            <aside className="md:w-64 shrink-0 bg-brand-secondary/5 border-r border-brand-secondary/10 overflow-x-auto">
+                <nav className="p-3 md:p-6 flex md:flex-col gap-2 whitespace-nowrap">
+                    <h2 className="hidden md:block font-display text-2xl text-brand-secondary mb-6">Administration</h2>
                     
                     <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-secondary/10 transition-colors text-brand-text/80 font-medium">
                         <LayoutDashboard className="w-5 h-5" />
-                        Vue d'ensemble
+                        Vue d&apos;ensemble
                     </Link>
                     
                     <Link href="/admin/products" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-secondary/10 transition-colors text-brand-text/80 font-medium">

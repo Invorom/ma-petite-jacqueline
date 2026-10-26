@@ -99,7 +99,7 @@ export function ProductForm() {
                 <div>
                     <label className="text-xs font-bold text-brand-text/80 uppercase">Catégorie</label>
                     <select name="category" required className="w-full mt-1 px-4 py-2 border rounded-xl bg-white">
-                        <option value="boucles-d-oreilles">Boucles d'oreilles</option>
+                        <option value="boucles-d-oreilles">Boucles d&apos;oreilles</option>
                         <option value="colliers">Colliers</option>
                         <option value="bracelets">Bracelets</option>
                         <option value="broches">Broches</option>

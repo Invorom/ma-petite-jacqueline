@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
 import { DeleteReviewButton } from "@/app/components/DeleteReviewButton";
 import { Star } from "lucide-react";
 
 export default async function AdminReviewsPage() {
+    await requireAdmin();
     const reviews = await prisma.review.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -39,7 +41,7 @@ export default async function AdminReviewsPage() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-brand-text/80 text-sm italic break-all">
-                                    "{review.text}"
+                                    &quot;{review.text}&quot;
                                 </td>
                                 <td className="px-6 py-4 text-xs text-brand-text/60">
                                     {review.createdAt.toLocaleDateString("fr-FR")}

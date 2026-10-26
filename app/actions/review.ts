@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/authorization";
 
 export async function addReview(formData: FormData) {
   const session = await auth();
@@ -22,7 +23,7 @@ export async function addReview(formData: FormData) {
     throw new Error("L'avis ne doit pas dépasser 300 caractères.");
   }
 
-  if (rating < 1 || rating > 5) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new Error("La note doit être comprise entre 1 et 5.");
   }
 
@@ -38,11 +39,7 @@ export async function addReview(formData: FormData) {
 }
 
 export async function deleteReview(id: string) {
-  const session = await auth();
-
-  if (!session || !session.user || (session.user as any).role !== "ADMIN") {
-    throw new Error("Action non autorisée.");
-  }
+  await requireAdmin();
 
   await prisma.review.delete({
     where: { id }

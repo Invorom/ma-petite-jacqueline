@@ -10,7 +10,7 @@ export default async function NewReviewPage() {
         <div className="container mx-auto px-4 h-full flex flex-col items-center justify-center py-4">
             <div className="w-full max-w-2xl">
                 <Link href="/livre-d-or" className="inline-flex items-center text-sm text-brand-text/60 hover:text-brand-secondary mb-8">
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Retour au livre d'or
+                    <ArrowLeft className="w-4 h-4 mr-1" /> Retour au livre d&apos;or
                 </Link>
 
                 <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-brand-secondary/10">

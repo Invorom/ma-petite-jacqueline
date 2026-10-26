@@ -9,14 +9,16 @@ import { Pagination } from "@/app/components/Pagination";
 // Server Component
 export default async function ShopPage({ searchParams }: { searchParams: Promise<{ category?: string, page?: string }> }) {
     const { category, page } = await searchParams;
-    const currentPage = parseInt(page || '1', 10);
+    const parsedPage = Number(page || "1");
+    const currentPage = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, 10000) : 1;
     const PAGE_SIZE = 8;
 
-    const whereClause = category && category !== "tout-les-bijoux" ? { category } : {
+    const categoryFilter = category && !["all", "tout-les-bijoux"].includes(category) ? { category } : {
         category: {
             not: "cartes-cadeaux"
         }
     };
+    const whereClause = { ...categoryFilter, OR: [{ quantity: { gt: 0 } }, { category: "cartes-cadeaux" }] };
 
     const skip = (currentPage - 1) * PAGE_SIZE;
 
@@ -34,14 +36,14 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     const activeCategory = category || 'all';
 
     return (
-        <div className="container mx-auto px-4 h-full flex flex-col py-6 overflow-hidden">
+        <div className="container mx-auto px-4 h-full flex flex-col py-6 overflow-y-auto">
             <h1 className="font-display text-4xl text-brand-secondary text-center mb-6 flex-none">La Boutique</h1>
 
-            <div className="flex flex-col md:flex-row gap-8 flex-1 min-h-0">
+            <div className="flex flex-col md:flex-row gap-8 flex-1">
                 {/* Sidebar / Filters */}
                 <aside className="w-full md:w-64 space-y-4 flex-none overflow-y-auto custom-scrollbar pr-2">
                     <h2 className="font-bold text-lg mb-4 text-brand-text">Catégories</h2>
-                    <ul className="space-y-2">
+                    <ul className="flex flex-wrap md:block gap-x-4 gap-y-2 md:space-y-2 text-sm md:text-base">
                         {categories.map((cat) => (
                             <li key={cat.id}>
                                 <Link
@@ -60,11 +62,11 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
 
                 {/* Product Grid & Pagination */}
                 <div className="flex-1 flex flex-col min-h-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 grid-rows-2 gap-6 flex-1 min-h-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {products.map((product) => (
                             <Link key={product.id} href={`/shop/${product.id}`} className="group block min-h-0">
                                 <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-brand-secondary/10 h-full flex flex-col">
-                                    <div className="flex-1 bg-gray-100 relative overflow-hidden min-h-0">
+                                    <div className="aspect-square bg-gray-100 relative overflow-hidden">
                                         {/* Handle image display */}
                                         {product.image && product.image.startsWith('http') ? (
                                             <img src={product.image} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />

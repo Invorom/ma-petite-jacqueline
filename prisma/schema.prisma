@@ -1,6 +1,6 @@
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -13,10 +13,17 @@ model User {
   email         String    @unique
   password      String?
   role          String    @default("USER") // "ADMIN" or "USER"
+  sessionVersion Int      @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   reviews       Review[]
   orders        Order[]
+}
+
+model RateLimit {
+  key       String @id
+  count     Int
+  expiresAt DateTime
 }
 
 model Product {
@@ -63,6 +70,13 @@ model Order {
   stripeSessionId String? @unique
   shippingMethod  String? // "HOME" or "CLICK_COLLECT"
   shippingCost    Float?  @default(0)
+  paymentMethod   String @default("CARD")
+  promoCode       String?
+  shippingAddress String?
+  giftCodesJson   String @default("[]")
+  confirmationSentAt DateTime?
+  giftEmailSentAt DateTime?
+  statusEmailSent String?
 
   createdAt   DateTime @default(now())
 }

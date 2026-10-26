@@ -23,8 +23,8 @@ export default function GiftCardEmail({ codes }: { codes: { code: string, amount
                     </Section>
 
                     <Text style={{ color: "#3B2A20", fontSize: "14px", lineHeight: "1.5" }}>
-                        <strong>Comment l'utiliser ?</strong><br/>
-                        Lors de la commande sur notre site, il suffit de rentrer ce code dans la case "Code Promo" du panier.
+                        <strong>Comment l&apos;utiliser ?</strong><br/>
+                        Lors de la commande sur notre site, il suffit de rentrer ce code dans la case &quot;Code Promo&quot; du panier.
                     </Text>
 
                     <Hr style={{ borderColor: "#3B2A20", opacity: 0.2, margin: "40px 0 20px" }} />

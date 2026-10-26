@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +40,7 @@ const products = [
     },
     {
         name: 'Carte Cadeau',
-        category: 'carte-cadeaux',
+        category: 'cartes-cadeaux',
         price: 50,
         image: '/placeholder.jpg',
         description: 'Offrez le choix.',
@@ -48,10 +48,13 @@ const products = [
 ];
 
 async function main() {
+    if (process.env.NODE_ENV === 'production') throw new Error('Demo seed is disabled in production.');
     console.log('Start seeding ...');
-    for (const p of products) {
-        const product = await prisma.product.create({
-            data: p,
+    for (const entry of products) {
+        const product = await prisma.product.upsert({
+            where: { id: `demo-${products.indexOf(entry)}` },
+            update: {},
+            create: { ...entry, id: `demo-${products.indexOf(entry)}`, image: '/logo_jacqueline.png' },
         });
         console.log(`Created product with id: ${product.id}`);
     }
@@ -62,8 +65,8 @@ main()
     .then(async () => {
         await prisma.$disconnect();
     })
-    .catch(async (e) => {
-        console.error(e);
+    .catch(async (error) => {
+        console.error(error);
         await prisma.$disconnect();
         process.exit(1);
     });

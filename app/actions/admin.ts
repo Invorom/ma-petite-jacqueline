@@ -1,15 +1,12 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function toggleUserRole(userId: string, newRole: string) {
-    const session = await auth();
-
-    if (!session || (session.user as any)?.role !== "ADMIN") {
-        throw new Error("Action non autorisée.");
-    }
+    const admin = await requireAdmin();
+    if (userId === admin.id && newRole !== "ADMIN") throw new Error("Vous ne pouvez pas retirer votre propre accès administrateur.");
 
     if (newRole !== "ADMIN" && newRole !== "USER") {
         throw new Error("Rôle invalide.");

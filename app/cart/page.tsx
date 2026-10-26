@@ -3,7 +3,7 @@
 import { useCart } from "@/lib/cart-context";
 import Link from "next/link";
 import { Trash2, Gift, CheckCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { validatePromo, processCheckout } from "@/app/actions/promo";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -18,30 +18,34 @@ function CartContent() {
     const searchParams = useSearchParams();
     
     const [promoInput, setPromoInput] = useState("");
-    const [appliedPromo, setAppliedPromo] = useState<{ code: string, amount: number, type: string } | null>(null);
+    const [selectedPromo, setAppliedPromo] = useState<{ code: string, amount: number, type: string } | null>(null);
+    const appliedPromo = cart.some(item => item.category === "cartes-cadeaux") ? null : selectedPromo;
     const [promoError, setPromoError] = useState("");
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [shippingMethod, setShippingMethod] = useState<"HOME" | "CLICK_COLLECT">("HOME");
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const checkedSession = useRef<string | null>(null);
     const [generatedCodes, setGeneratedCodes] = useState<{code: string, amount: number}[] | null>(null);
 
     useEffect(() => {
-        if (searchParams?.get("success") === "true") {
-            toast.success("Paiement réussi ! Votre commande est validée.");
-            clearCart();
-            // Optional: You could fetch order details here if you want to show them instead of redirecting
-            router.replace("/account");
+        const sessionId = searchParams?.get("session_id");
+        if (sessionId && session?.user && checkedSession.current !== sessionId) {
+            checkedSession.current = sessionId;
+            import("@/app/actions/stripe").then(({ getCheckoutStatus }) => getCheckoutStatus(sessionId)).then(result => {
+                if (result.paid) {
+                    toast.success(result.confirmed ? "Paiement confirmé." : "Paiement reçu. Votre commande est en cours de confirmation.");
+                    clearCart();
+                    router.replace("/account");
+                } else {
+                    toast.error("Le paiement n'est pas confirmé.");
+                }
+            }).catch(() => toast.error("Vérification indisponible. Consultez votre compte avant de repayer."));
         }
         if (searchParams?.get("canceled") === "true") {
             toast.error("Le paiement a été annulé.");
             router.replace("/cart");
         }
-    }, [searchParams, clearCart, router]);
-
-    useEffect(() => {
-        if (appliedPromo && cart.some(item => item.category === "cartes-cadeaux")) {
-            setAppliedPromo(null);
-            toast.error("Le code promo a été retiré car il n'est pas applicable avec une carte cadeau.");
-        }
-    }, [cart, appliedPromo]);
+    }, [searchParams, clearCart, router, session]);
 
     const handleApplyPromo = async () => {
         setPromoError("");
@@ -62,6 +66,7 @@ function CartContent() {
     };
 
     const handleCheckout = async (payInCash: boolean = false) => {
+        if (!acceptedTerms || isCheckingOut) return;
         if (!session) {
             toast.error("Vous devez être connecté pour valider la commande.");
             return;
@@ -77,10 +82,11 @@ function CartContent() {
                 const result = await processCheckout(items, appliedPromo?.code, userEmail, "PENDING_CASH", shippingMethod, 0);
                 if (result.success) {
                     toast.success("Commande réservée ! Paiement sur place.");
+                    if (result.warning) toast.warning(result.warning);
                     clearCart();
                     router.replace("/account");
                 } else {
-                    toast.error("Erreur lors de la réservation");
+                    toast.error(result.error || "Erreur lors de la réservation");
                 }
             } else {
                 // Paiement Stripe
@@ -137,8 +143,6 @@ function CartContent() {
         );
     }
 
-    const [shippingMethod, setShippingMethod] = useState<"HOME" | "CLICK_COLLECT">("HOME");
-
     // Calculer le total éligible aux réductions (tout sauf les cartes cadeaux)
     const eligibleTotal = cart
         .filter(item => item.category !== "cartes-cadeaux")
@@ -152,7 +156,7 @@ function CartContent() {
 
     const subtotal = Math.max(0, eligibleTotal - discountAmount) + nonEligibleTotal;
     const isFreeShipping = subtotal >= 100;
-    const shippingCost = shippingMethod === "CLICK_COLLECT" || isFreeShipping ? 0 : 4;
+    const shippingCost = shippingMethod === "CLICK_COLLECT" || isFreeShipping || cart.every(item => item.category === "cartes-cadeaux") ? 0 : 4;
 
     const finalTotal = subtotal + shippingCost;
 
@@ -166,7 +170,7 @@ function CartContent() {
                         <Gift className="w-10 h-10 text-brand-secondary/40" />
                     </div>
                     <h2 className="font-display text-3xl text-brand-secondary mb-4">Votre panier est bien vide...</h2>
-                    <p className="text-lg text-brand-text/60 mb-8 max-w-md mx-auto">Il semblerait que vous n'ayez pas encore trouvé la pièce unique qui fera battre votre cœur.</p>
+                    <p className="text-lg text-brand-text/60 mb-8 max-w-md mx-auto">Il semblerait que vous n&apos;ayez pas encore trouvé la pièce unique qui fera battre votre cœur.</p>
                     <Link href="/shop" className="inline-block px-8 py-4 bg-brand-secondary text-white rounded-full font-bold hover:bg-brand-primary transition-all hover:scale-105 transform duration-200 shadow-sm">
                         Découvrir la boutique
                     </Link>
@@ -193,6 +197,7 @@ function CartContent() {
                                 </div>
                                 <button
                                     onClick={() => removeFromCart(item.id)}
+                                    aria-label={`Retirer ${item.name}`}
                                     className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-2"
                                 >
                                     <Trash2 className="w-5 h-5" />
@@ -240,7 +245,7 @@ function CartContent() {
                                 )}
                                 {appliedPromo && cart.some(item => item.category === "cartes-cadeaux") && (
                                     <div className="text-xs text-orange-500 italic mt-2 text-right">
-                                        (Les codes promos ne s'appliquent pas aux cartes cadeaux)
+                                        (Les codes promos ne s&apos;appliquent pas aux cartes cadeaux)
                                     </div>
                                 )}
                             </div>
@@ -260,7 +265,7 @@ function CartContent() {
                                         />
                                         <div className="flex-1 flex justify-between text-sm">
                                             <span className="font-medium">Livraison à domicile</span>
-                                            <span className="font-bold">{isFreeShipping ? "Offerte" : "4.00 €"}</span>
+                                            <span className="font-bold">{shippingCost === 0 ? "Offerte" : "4.00 €"}</span>
                                         </div>
                                     </label>
                                     <label className="flex items-start gap-3 cursor-pointer">
@@ -279,7 +284,7 @@ function CartContent() {
                                             </div>
                                             {shippingMethod === "CLICK_COLLECT" && (
                                                 <span className="text-xs text-brand-text/60 mt-1 italic">
-                                                    Retrait à l'atelier : 19 rue de l'église 80200 ASSEVILLERS
+                                                    Retrait à l&apos;atelier : 19 rue de l&apos;église 80200 ASSEVILLERS
                                                 </span>
                                             )}
                                         </div>
@@ -323,24 +328,28 @@ function CartContent() {
                             {!session ? (
                                 <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-xl text-center">
                                     <p className="text-sm text-orange-800 mb-3">Vous devez être connecté pour valider votre commande.</p>
-                                    <Link href="/auth/login" className="inline-block px-4 py-2 bg-brand-secondary text-white rounded-lg text-sm font-bold hover:bg-brand-primary transition-colors">
+                                    <Link href="/account" className="inline-block px-4 py-2 bg-brand-secondary text-white rounded-lg text-sm font-bold hover:bg-brand-primary transition-colors">
                                         Se connecter
                                     </Link>
                                 </div>
                             ) : null}
 
+                            <label className="flex items-start gap-2 text-sm mb-4">
+                                <input type="checkbox" checked={acceptedTerms} onChange={event => setAcceptedTerms(event.target.checked)} className="mt-1" />
+                                <span>J&apos;accepte les <Link href="/cgv" target="_blank" className="underline">conditions générales de vente</Link>.</span>
+                            </label>
                             {shippingMethod === "CLICK_COLLECT" ? (
                                 <div className="space-y-3 mb-4">
                                     <button 
                                         onClick={() => handleCheckout(false)}
-                                        disabled={isCheckingOut || !session}
+                                        disabled={isCheckingOut || !session || !acceptedTerms}
                                         className="w-full py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all shadow-md disabled:opacity-50"
                                     >
                                         {isCheckingOut ? "Validation..." : "Payer par Carte Bancaire"}
                                     </button>
                                     <button 
                                         onClick={() => handleCheckout(true)}
-                                        disabled={isCheckingOut || !session}
+                                        disabled={isCheckingOut || !session || !acceptedTerms}
                                         className="w-full py-4 bg-white border-2 border-brand-secondary text-brand-secondary rounded-xl font-bold hover:bg-brand-light transition-all shadow-sm disabled:opacity-50"
                                     >
                                         {isCheckingOut ? "Validation..." : "Réserver et Payer sur place (Espèces)"}
@@ -349,7 +358,7 @@ function CartContent() {
                             ) : (
                                 <button 
                                     onClick={() => handleCheckout(false)}
-                                    disabled={isCheckingOut || !session}
+                                    disabled={isCheckingOut || !session || !acceptedTerms}
                                     className="w-full py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-primary transition-all shadow-md mb-4 disabled:opacity-50"
                                 >
                                     {isCheckingOut ? "Validation..." : "Payer la commande"}

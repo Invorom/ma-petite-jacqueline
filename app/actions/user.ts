@@ -19,8 +19,8 @@ export async function changePassword(formData: FormData) {
         throw new Error("Tous les champs sont requis.");
     }
 
-    if (newPassword.length < 6) {
-        throw new Error("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+    if (newPassword.length < 12 || Buffer.byteLength(newPassword, "utf8") > 72 || currentPassword.length > 72) {
+        throw new Error("Le nouveau mot de passe doit contenir au moins 12 caractères et au maximum 72 octets.");
     }
 
     if (newPassword !== confirmPassword) {
@@ -45,7 +45,7 @@ export async function changePassword(formData: FormData) {
 
     await prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword, sessionVersion: { increment: 1 } }
     });
 
     return { success: true };

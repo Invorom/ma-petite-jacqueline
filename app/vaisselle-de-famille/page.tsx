@@ -4,17 +4,17 @@ import { Mail, Phone } from "lucide-react";
 export default function VaisselleFamillePage() {
     return (
         <div className="container mx-auto px-4 flex flex-col items-center text-center h-full justify-center">
-            <h1 className="font-display text-4xl text-brand-secondary mb-4">Projet "Vaisselle de famille"</h1>
+            <h1 className="font-display text-4xl text-brand-secondary mb-4">Projet &quot;Vaisselle de famille&quot;</h1>
 
             <div className="max-w-xl space-y-4 text-base font-serif text-brand-text/90 leading-snug bg-white p-6 rounded-xl shadow-sm border border-brand-secondary/10">
                 <p>
-                    Vous avez de la vaisselle qui vous tient à cœur, héritée d'un proche ou pleine de souvenirs ?
+                    Vous avez de la vaisselle qui vous tient à cœur, héritée d&apos;un proche ou pleine de souvenirs ?
                 </p>
                 <p className="font-bold text-brand-secondary text-lg">
-                    Je vous propose d'en faire un bijou unique et durable.
+                    Je vous propose d&apos;en faire un bijou unique et durable.
                 </p>
                 <p>
-                    À partir d'un fragment de votre vaisselle, je crée pour vous un bijou sur mesure.
+                    À partir d&apos;un fragment de votre vaisselle, je crée pour vous un bijou sur mesure.
                 </p>
                 <p className="italic text-sm">
                     Parce que les objets ont une âme, et que certains méritent une seconde vie.

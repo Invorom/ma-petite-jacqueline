@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
 import { Package, PlusCircle, Trash2 } from "lucide-react";
 import { deletePromoCode } from "@/app/actions/promo";
 import { GiftCardForm, PromoCodeForm } from "./PromoForms";
 
 export default async function AdminPromosPage() {
+    await requireAdmin();
     const promoCodes = await prisma.promoCode.findMany({
         orderBy: { createdAt: "desc" }
     });
@@ -28,10 +30,10 @@ export default async function AdminPromosPage() {
                     <div className="bg-brand-light/50 p-6 rounded-2xl border border-brand-secondary/20 dashed mt-6">
                         <h3 className="font-bold text-brand-secondary mb-2">Comment ça marche ?</h3>
                         <p className="text-sm text-brand-text/80 mb-2">
-                            Les <strong className="text-brand-secondary">Cartes Cadeaux</strong> apparaissent dans la boutique comme des produits. Elles n'ont pas de date de péremption.
+                            Les <strong className="text-brand-secondary">Cartes Cadeaux</strong> apparaissent dans la boutique comme des produits. Elles n&apos;ont pas de date de péremption.
                         </p>
                         <p className="text-sm text-brand-text/80">
-                            Les <strong className="text-brand-secondary">Codes Promos</strong> générés ici ou suite à l'achat d'une carte cadeau sont temporaires (s'ils ont une date d'expiration) et s'utilisent dans le panier.
+                            Les <strong className="text-brand-secondary">Codes Promos</strong> générés ici ou suite à l&apos;achat d&apos;une carte cadeau sont temporaires (s&apos;ils ont une date d&apos;expiration) et s&apos;utilisent dans le panier.
                         </p>
                     </div>
                 </div>

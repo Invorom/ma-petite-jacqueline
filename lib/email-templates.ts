@@ -1,5 +1,9 @@
-export function orderConfirmationHtml({ orderId, items, total, shippingMethod }: { orderId: string, items: any[], total: number, shippingMethod: string }) {
-    const itemsHtml = items.map(item => `<tr><td style="padding:8px 0;color:#3B2A20">${item.name || item.category}</td><td style="padding:8px 0;text-align:right;color:#3B2A20">${item.price} €</td></tr>`).join("");
+function escapeHtml(value: string) {
+    return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+
+export function orderConfirmationHtml({ orderId, items, total, shippingMethod, pendingCash = false }: { orderId: string, items: { name?: string; category: string; price: number }[], total: number, shippingMethod: string, pendingCash?: boolean }) {
+    const itemsHtml = items.map(item => `<tr><td style="padding:8px 0;color:#3B2A20">${escapeHtml(item.name || item.category)}</td><td style="padding:8px 0;text-align:right;color:#3B2A20">${item.price.toFixed(2)} €</td></tr>`).join("");
     const shippingLabel = shippingMethod === "HOME" ? "Livraison à domicile" : "Click & Collect (Retrait à l'atelier)";
     const nextStep = shippingMethod === "HOME"
         ? "Nous préparons votre commande avec soin. Vous recevrez un nouvel e-mail dès son expédition !"
@@ -8,6 +12,7 @@ export function orderConfirmationHtml({ orderId, items, total, shippingMethod }:
     return `<!DOCTYPE html><html><body style="background-color:#F7EFE5;font-family:sans-serif;padding:40px 0;margin:0">
 <div style="background-color:#ffffff;padding:40px;border-radius:8px;max-width:600px;margin:0 auto">
 <h1 style="color:#3B2A20;font-size:24px;text-align:center;margin-bottom:30px">Merci pour votre commande !</h1>
+${pendingCash ? "<p>Réservation enregistrée. Paiement à effectuer à l'atelier. Les cartes cadeaux seront émises après encaissement.</p>" : ""}
 <p style="color:#3B2A20;font-size:16px;margin-bottom:20px">Votre commande <strong>#${orderId.substring(orderId.length - 8).toUpperCase()}</strong> a bien été confirmée.</p>
 <div style="margin-bottom:30px;background-color:#F7EFE5;padding:20px;border-radius:8px">
 <h3 style="font-size:18px;margin-top:0;color:#3B2A20">Récapitulatif :</h3>

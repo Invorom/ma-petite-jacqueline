@@ -25,8 +25,8 @@ export function ReviewForm() {
         await addReview(formData);
         setText("");
         setRating(5);
-      } catch (err: any) {
-        setError(err.message || "Une erreur est survenue.");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       }
     });
   };
@@ -46,6 +46,7 @@ export function ReviewForm() {
           <button
             type="button"
             key={star}
+            aria-label={`${star} étoiles`}
             onClick={() => setRating(star)}
             onMouseEnter={() => setHoveredRating(star)}
             onMouseLeave={() => setHoveredRating(0)}

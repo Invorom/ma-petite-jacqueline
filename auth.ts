@@ -3,10 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { allowRequest, clientAddress } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(6).max(72),
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -16,9 +17,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         try {
           const { email, password } = loginSchema.parse(credentials);
+          if (!await allowRequest("login-email", email, 10, 15 * 60 * 1000) || !await allowRequest("login-ip", clientAddress(request), 100, 15 * 60 * 1000)) return null;
 
           const user = await prisma.user.findUnique({
             where: { email },
@@ -35,7 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           return user;
-        } catch (error) {
+        } catch {
           return null;
         }
       },
@@ -48,14 +50,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role || "USER";
+        token.role = user.role || "USER";
+        token.sessionVersion = user.sessionVersion || 0;
+      }
+      if (token.id) {
+        const current = await prisma.user.findUnique({ where: { id: token.id as string }, select: { role: true, sessionVersion: true } });
+        if (!current || current.sessionVersion !== (token.sessionVersion ?? 0)) return null;
+        token.role = current.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role as string;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     },

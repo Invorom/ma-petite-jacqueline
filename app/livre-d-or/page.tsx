@@ -13,7 +13,8 @@ export default async function LivreDOrPage(
     const session = await auth();
     
     // Pagination logic
-    const page = typeof searchParams.page === 'string' ? parseInt(searchParams.page, 10) : 1;
+    const parsedPage = typeof searchParams.page === 'string' ? Number(searchParams.page) : 1;
+    const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, 10000) : 1;
     const limit = 6;
     const skip = (page - 1) * limit;
 
@@ -40,7 +41,7 @@ export default async function LivreDOrPage(
         <div className="container mx-auto px-4 h-full flex flex-col pt-6 overflow-hidden">
             <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 flex-none">
                 <div className="text-center md:text-left">
-                    <h1 className="font-display text-4xl text-brand-secondary mb-2">Livre d'or</h1>
+                    <h1 className="font-display text-4xl text-brand-secondary mb-2">Livre d&apos;or</h1>
                     <p className="text-brand-text/80 text-sm max-w-lg">
                         Découvrez les retours de nos clients ou partagez votre propre expérience avec Ma petite Jacqueline.
                     </p>
@@ -74,7 +75,7 @@ export default async function LivreDOrPage(
                                         ))}
                                     </div>
                                     <p className="font-serif italic text-brand-text/90 mb-4 flex-grow text-lg break-all">
-                                        "{review.text}"
+                                        &quot;{review.text}&quot;
                                     </p>
                                     <div className="mt-auto pt-4 border-t border-brand-secondary/10">
                                         <p className="font-bold text-brand-secondary">

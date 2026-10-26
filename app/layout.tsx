@@ -20,6 +20,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
     template: "%s | Ma petite Jacqueline",
     default: "Ma petite Jacqueline - Bijoux uniques en vaisselle ancienne",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Ma petite Jacqueline",
     description: "Bijoux uniques issus de vaisselle ancienne.",
-    url: "https://mapetitejacqueline.fr",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     siteName: "Ma petite Jacqueline",
     locale: "fr_FR",
     type: "website",
@@ -55,7 +56,7 @@ export default function RootLayout({
       >
         <SessionProviderWrapper>
           <CartProvider>
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col h-dvh overflow-hidden">
               <Header />
               <main className="flex-1 overflow-hidden flex flex-col">
                 {children}

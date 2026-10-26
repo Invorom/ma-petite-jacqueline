@@ -12,7 +12,7 @@ export default function CGVPage() {
                         <li><strong>Nom commercial :</strong> Ma petite Jacqueline</li>
                         <li><strong>Statut :</strong> Artisan – Micro-entreprise immatriculée au Répertoire des Métiers</li>
                         <li><strong>Numéro SIRET :</strong> 98478067600016</li>
-                        <li><strong>Adresse :</strong> 19 rue de l'église 80200 ASSEVILLERS</li>
+                        <li><strong>Adresse :</strong> 19 rue de l&apos;église 80200 ASSEVILLERS</li>
                         <li><strong>E-mail :</strong> mapetitejacqueline@gmail.com</li>
                         <li><strong>Site internet :</strong> mapetitejacqueline.com</li>
                     </ul>
@@ -30,7 +30,7 @@ export default function CGVPage() {
                     <h2 className="font-display text-2xl text-brand-secondary mb-4 border-b border-brand-secondary/10 pb-2">3. Produits</h2>
                     <p className="mb-2">Chaque bijou est fabriqué à la main à partir de pièces uniques issues de vaisselle ancienne.</p>
                     <p className="mb-2">De légères variations de couleur, de forme ou de texture peuvent exister d’un article à l’autre : elles témoignent du caractère artisanal et unique de chaque création.</p>
-                    <p>Les photos des produits sont présentées à titre indicatif et n’ont pas de valeur contractuelle.</p>
+                    <p>Les photographies et descriptions présentent les caractéristiques essentielles des produits. Le rendu des couleurs peut varier selon les écrans.</p>
                 </section>
 
                 <section>
@@ -50,15 +50,15 @@ export default function CGVPage() {
                 <section>
                     <h2 className="font-display text-2xl text-brand-secondary mb-4 border-b border-brand-secondary/10 pb-2">6. Paiement</h2>
                     <p className="mb-2">Les paiements sont sécurisés et peuvent être effectués par :</p>
-                    <p className="mb-4">Carte bancaire via Stripe</p>
+                    <p className="mb-4">Carte bancaire via Stripe, ou espèces lors du retrait à l&apos;atelier après réservation.</p>
                     <p>Les produits demeurent la propriété du vendeur jusqu’au paiement complet du prix.</p>
                 </section>
 
                 <section>
                     <h2 className="font-display text-2xl text-brand-secondary mb-4 border-b border-brand-secondary/10 pb-2">7. Livraison</h2>
                     <p className="mb-2">Les commandes sont expédiées depuis Assevillers 80200 sous 48 heures après réception du paiement.</p>
-                    <p className="mb-2">Les délais de livraison sont ceux indiqués par le transporteur (La Poste, Mondial Relay, etc.).</p>
-                    <p>Le vendeur ne saurait être tenu responsable d’un retard ou d’une perte imputable au transporteur.</p>
+                    <p className="mb-2">La livraison à domicile est proposée en France. Les frais sont de 4 €, offerts à partir de 100 € après remise. Le retrait à l&apos;atelier est gratuit. Les cartes cadeaux seules sont dématérialisées et sans frais de port.</p>
+                    <p>En cas de retard ou de perte, contactez le vendeur afin de rechercher une solution. Les droits légaux du consommateur restent applicables ; le vendeur reste responsable de la bonne exécution de la commande jusqu&apos;à sa remise dans les conditions prévues par la loi.</p>
                 </section>
 
                 <section>
@@ -67,11 +67,12 @@ export default function CGVPage() {
                         Conformément aux dispositions des articles L221-18 et suivants du Code de la consommation, l’acheteur dispose, en principe, d’un délai de quatorze (14) jours à compter de la réception du produit pour exercer son droit de rétractation sans avoir à justifier de motifs ni à payer de pénalités.
                     </p>
                     <p className="mb-4">
-                        Cependant, le droit de rétractation ne s’applique pas aux articles proposés sur le site Ma petite Jacqueline dès lors qu’il s’agit de bijoux réalisés en pièce unique, confectionnés selon les spécifications du client ou nettement personnalisés (projet vaisselle de famille), conformément à l’article L221-28 du Code de la consommation.
+                        Seuls les biens confectionnés selon les spécifications du client ou nettement personnalisés peuvent relever de l&apos;exception prévue à l&apos;article L221-28 du Code de la consommation. Le caractère artisanal ou unique d&apos;un bijou standard ne supprime pas le droit de rétractation.
                     </p>
                     <p>
-                        Chaque création étant unique, aucun échange ni remboursement ne pourra être effectué une fois la commande validée et le produit expédié, sauf en cas de défaut avéré du produit ou d’erreur imputable à Ma petite Jacqueline.
+                        Pour vous rétracter, adressez une déclaration claire par e-mail ou courrier au vendeur dans le délai légal. Renvoyez ensuite le produit dans les quatorze jours suivant votre notification. Les frais directs de retour sont à votre charge. Le remboursement, incluant les frais de livraison standard initiaux, intervient dans les quatorze jours suivant la notification ; il peut être différé jusqu&apos;à récupération du bien ou réception d&apos;une preuve de son expédition.
                     </p>
+                    <p className="mt-4">Modèle de déclaration : « À Sandra Cadet, 19 rue de l&apos;église, 80200 Assevillers, mapetitejacqueline@gmail.com. Je vous notifie ma rétractation de la vente du bien suivant : [produit]. Commandé le [date], reçu le [date]. Nom et adresse du client : [coordonnées]. Date et signature (pour un courrier papier). »</p>
                 </section>
 
                 <section>

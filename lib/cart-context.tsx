@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import type { Product } from '@prisma/client';
 
 type CartItem = Product & {
@@ -17,26 +17,31 @@ type CartContextType = {
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const subscribeHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
+function readCart(): CartItem[] {
+    try {
+        const parsed = JSON.parse(localStorage.getItem("cart") || "[]");
+        return Array.isArray(parsed) ? parsed.filter(item => item && typeof item.id === "string" && typeof item.name === "string" && typeof item.category === "string" && Number.isFinite(item.price) && item.price > 0).slice(0, 50).map(item => ({ ...item, quantity: 1 })) : [];
+    } catch {
+        return [];
+    }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-    const [cart, setCart] = useState<CartItem[]>([]);
-
-    // Load cart from local storage on mount
-    useEffect(() => {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart) {
-            try {
-                setCart(JSON.parse(savedCart));
-            } catch (e) {
-                console.error('Failed to parse cart', e);
-            }
-        }
-    }, []);
+    const [storedCart, setCart] = useState<CartItem[]>(readCart);
+    const loaded = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot);
+    const cart = loaded ? storedCart : [];
 
     // Save cart to local storage on change
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cart));
-    }, [cart]);
+        if (!loaded) return;
+        try {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        } catch {}
+    }, [cart, loaded]);
 
     const addToCart = (product: Product) => {
         setCart((prev) => {
@@ -53,7 +58,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart((prev) => prev.filter((item) => item.id !== productId));
     };
 
-    const clearCart = () => setCart([]);
+    const clearCart = useCallback(() => setCart([]), []);
 
     const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
     const cartTotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);

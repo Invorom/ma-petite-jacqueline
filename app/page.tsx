@@ -38,29 +38,29 @@ export default function Home() {
           </h1>
 
           <p>
-            Après le décès de mon papa en 2023, j'ai voulu garder un souvenir de lui : sa tasse, celle dans laquelle il buvait son café chaque matin.
+            Après le décès de mon papa en 2023, j&apos;ai voulu garder un souvenir de lui : sa tasse, celle dans laquelle il buvait son café chaque matin.
             En cherchant une façon de la garder toujours auprès de moi, est née <span className="font-bold text-brand-secondary">Ma petite Jacqueline</span>.
           </p>
 
           <p>
-            Jacqueline, c'était ma grand-mère chérie. Elle aimait les fleurs, la douceur, les petits riens qui embellissent le quotidien. Son prénom et sa bienveillance m'ont profondément inspirée.
+            Jacqueline, c&apos;était ma grand-mère chérie. Elle aimait les fleurs, la douceur, les petits riens qui embellissent le quotidien. Son prénom et sa bienveillance m&apos;ont profondément inspirée.
           </p>
 
           <div className="py-2">
             <p className="font-bold text-2xl text-brand-secondary mb-2">Ma petite Jacqueline,</p>
-            <p>c'est une histoire de cœur.</p>
-            <p>Une entreprise née de l'amour, de la mémoire et du goût des belles choses.</p>
+            <p>c&apos;est une histoire de cœur.</p>
+            <p>Une entreprise née de l&apos;amour, de la mémoire et du goût des belles choses.</p>
           </div>
 
           <p>
             Ici, chaque pièce est <span className="font-bold text-brand-secondary">façonnée à la main</span>, avec attention et émotion.
             <br />
-            Chaque création est <span className="font-bold text-brand-secondary">unique</span>, comme les histoires qu'elle porte.
+            Chaque création est <span className="font-bold text-brand-secondary">unique</span>, comme les histoires qu&apos;elle porte.
           </p>
 
           <div className="pt-4 font-display text-3xl md:text-4xl text-brand-secondary leading-snug">
             <p>Bienvenue dans mon univers,</p>
-            <p className="text-xl md:text-2xl mt-2 text-brand-text/80 font-serif">où la vaisselle devient souvenir, et où chaque objet raconte un peu d'amour. 💕</p>
+            <p className="text-xl md:text-2xl mt-2 text-brand-text/80 font-serif">où la vaisselle devient souvenir, et où chaque objet raconte un peu d&apos;amour. 💕</p>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export default function Home() {
             href="/vaisselle-de-famille"
             className="px-8 py-3 border-2 border-brand-secondary text-brand-secondary rounded-full text-lg font-medium hover:bg-brand-secondary/5 transition-all"
           >
-            Projet "Vaisselle de famille"
+            Projet &quot;Vaisselle de famille&quot;
           </Link>
         </div>
 

@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/authorization";
+import type { Order, User } from "@prisma/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import OrderActions from "./OrderActions";
+import OrderActions, { OrderMaintenance } from "./OrderActions";
 import { Package, Truck, Store, CheckCircle, Clock } from "lucide-react";
 
 export default async function AdminOrdersPage() {
+    await requireAdmin();
     const orders = await prisma.order.findMany({
         include: { user: true },
         orderBy: { createdAt: "desc" },
@@ -13,7 +16,7 @@ export default async function AdminOrdersPage() {
     // Grouping logic
     const toShip = orders.filter(o => o.status === "PAID" && o.shippingMethod === "HOME");
     const clickAndCollect = orders.filter(o => (o.status === "PAID" || o.status === "PENDING_CASH" || o.status === "READY_FOR_PICKUP") && o.shippingMethod === "CLICK_COLLECT");
-    const completed = orders.filter(o => o.status === "SHIPPED" || o.status === "COMPLETED_CASH" || o.status === "COMPLETED");
+    const completed = orders.filter(o => ["SHIPPED", "COMPLETED_CASH", "COMPLETED", "CANCELED", "PENDING_PAYMENT"].includes(o.status));
 
     return (
         <div>
@@ -76,8 +79,10 @@ export default async function AdminOrdersPage() {
     );
 }
 
-function OrderCard({ order }: { order: any }) {
+function OrderCard({ order }: { order: Order & { user: User } }) {
     const items = JSON.parse(order.itemsJson || "[]");
+    const details = order.shippingAddress ? JSON.parse(order.shippingAddress) : null;
+    const shipping = details?.shipping || details?.customer;
     
     return (
         <div className="bg-white border border-brand-secondary/10 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6">
@@ -93,18 +98,20 @@ function OrderCard({ order }: { order: any }) {
                     </div>
                     <div className="text-right">
                         <div className="font-bold text-xl text-brand-secondary">{order.totalAmount.toFixed(2)} €</div>
-                        {order.status === "PENDING_CASH" ? (
+                        {order.paymentMethod === "CASH" && ["PENDING_CASH", "READY_FOR_PICKUP"].includes(order.status) ? (
                             <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-md mt-1 inline-block">
                                 À encaisser sur place
                             </span>
                         ) : order.status === "READY_FOR_PICKUP" ? (
                             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-md mt-1 inline-block">
-                                Prête à l'atelier
+                                Prête à l&apos;atelier
                             </span>
                         ) : order.status === "COMPLETED_CASH" ? (
                             <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md mt-1 inline-block">
                                 Encaissée sur place
                             </span>
+                        ) : ["PENDING_PAYMENT", "CANCELED"].includes(order.status) ? (
+                            <span className="text-xs">{order.status === "CANCELED" ? "Annulée" : "Paiement non confirmé"}</span>
                         ) : (
                             <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md mt-1 inline-block">
                                 Déjà payée (Carte)
@@ -116,12 +123,19 @@ function OrderCard({ order }: { order: any }) {
                 <div className="bg-brand-light/30 rounded-xl p-4">
                     <p className="font-bold text-sm mb-2 text-brand-secondary">Client :</p>
                     <p className="text-sm">{order.user.name || "Client"} - <a href={`mailto:${order.user.email}`} className="text-brand-primary hover:underline">{order.user.email}</a></p>
+                    {shipping?.address && <address className="text-sm mt-2 not-italic">
+                        {shipping.name}<br />{shipping.address.line1}<br />
+                        {shipping.address.line2 && <>{shipping.address.line2}<br /></>}
+                        {shipping.address.postal_code} {shipping.address.city}<br />{shipping.address.country}
+                    </address>}
+                    {details?.customer?.phone && <p className="text-sm">{details.customer.phone}</p>}
+                    <p className="text-xs mt-2">Confirmation : {order.confirmationSentAt ? "envoyée" : "non envoyée"}</p>
                 </div>
 
                 <div>
                     <p className="font-bold text-sm mb-2 text-brand-secondary">Produits ({items.length}) :</p>
                     <ul className="space-y-2">
-                        {items.map((item: any, idx: number) => (
+                        {items.map((item: { name?: string; category: string; price: number; image?: string }, idx: number) => (
                             <li key={idx} className="flex items-center gap-3 text-sm">
                                 <div className="w-8 h-8 bg-brand-light rounded overflow-hidden flex-shrink-0">
                                     {item.image ? (
@@ -139,7 +153,8 @@ function OrderCard({ order }: { order: any }) {
             </div>
 
             <div className="w-full md:w-64 flex flex-col justify-end border-t md:border-t-0 md:border-l border-brand-secondary/10 pt-4 md:pt-0 md:pl-6">
-                <OrderActions orderId={order.id} currentStatus={order.status} shippingMethod={order.shippingMethod} />
+                <OrderActions orderId={order.id} currentStatus={order.status} shippingMethod={order.shippingMethod || "HOME"} paymentMethod={order.paymentMethod} />
+                <OrderMaintenance orderId={order.id} canCancel={order.paymentMethod === "CASH" && ["PENDING_CASH", "READY_FOR_PICKUP"].includes(order.status)} />
             </div>
         </div>
     );

@@ -1,116 +1,64 @@
 "use server";
 
-import Stripe from "stripe";
-import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_mock", {
-    apiVersion: "2026-05-27.dahlia", // Adjust based on library version, or omit for default
-});
+import { requireUser } from "@/lib/authorization";
+import { reserveOrder, releaseOrder } from "@/lib/checkout";
+import { getStripe, getSiteUrl } from "@/lib/stripe";
 
 export async function createCheckoutSession(
-    items: { id: string, name: string, price: number, category: string, image?: string }[],
-    appliedCode: { code: string, amount: number, type: string } | null,
+    items: { id: string }[],
+    appliedCode: { code: string } | null,
     shippingMethod: "HOME" | "CLICK_COLLECT",
-    userEmail: string
+    _userEmail?: string
 ) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-        // En mode démo, on simule le succès si pas de clé configurée
-        return { error: "Veuillez configurer votre clé Stripe (STRIPE_SECRET_KEY) pour activer le paiement." };
-    }
-
     try {
-        const headerList = await headers();
-        const origin = headerList.get("origin") || "http://localhost:3000";
-
-        // Calculate discount
-        const eligibleTotal = items.filter(i => i.category !== "cartes-cadeaux").reduce((acc, i) => acc + i.price, 0);
-        let discountAmount = 0;
-        let couponId = undefined;
-
-        // NOTE: In a real advanced Stripe setup, we'd create a Stripe Coupon on the fly or use existing ones.
-        // But the simplest way is to pass a line item with a negative amount, OR pass it via 'discounts'.
-        // Since Stripe line items cannot have negative amounts directly, we can create a Coupon via API.
-        
-        if (appliedCode && eligibleTotal > 0) {
-            if (appliedCode.type === "PERCENTAGE") {
-                discountAmount = eligibleTotal * (appliedCode.amount / 100);
-            } else {
-                discountAmount = Math.min(appliedCode.amount, eligibleTotal);
-            }
-            // Create a one-off coupon for this session
-            const coupon = await stripe.coupons.create({
-                amount_off: Math.round(discountAmount * 100), // in cents
-                currency: 'eur',
-                duration: 'once',
-                name: `Code Promo: ${appliedCode.code}`
-            });
-            couponId = coupon.id;
+        const user = await requireUser();
+        const stripe = getStripe();
+        const origin = getSiteUrl();
+        if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+            return { error: "Le paiement n'est pas encore configuré. Contactez la boutique." };
         }
-
-        // Calculate Shipping
-        const subtotal = Math.max(0, eligibleTotal - discountAmount) + items.filter(i => i.category === "cartes-cadeaux").reduce((acc, i) => acc + i.price, 0);
-        const isFreeShipping = subtotal >= 100;
-        const shippingCost = shippingMethod === "CLICK_COLLECT" || isFreeShipping ? 0 : 4;
-
-        // Create line items
-        const lineItems = items.map(item => ({
-            price_data: {
-                currency: "eur",
-                product_data: {
-                    name: item.name,
-                    images: item.image ? [item.image] : undefined,
-                    metadata: {
-                        productId: item.id,
-                        category: item.category
-                    }
-                },
-                unit_amount: Math.round(item.price * 100), // in cents
-            },
-            quantity: 1,
-        }));
-
-        // Shipping options
-        const shippingOptions = shippingCost > 0 ? [
-            {
-                shipping_rate_data: {
-                    type: "fixed_amount",
-                    fixed_amount: { amount: Math.round(shippingCost * 100), currency: "eur" },
-                    display_name: "Livraison à domicile",
-                }
+        const reserved = await reserveOrder(user.id, { items, code: appliedCode?.code, shippingMethod }, "CARD");
+        let couponId: string | undefined;
+        try {
+            if (reserved.totals.discount > 0) {
+                const coupon = await stripe.coupons.create({ amount_off: reserved.totals.discount, currency: "eur", duration: "once" }, { idempotencyKey: `coupon-${reserved.order.id}` });
+                couponId = coupon.id;
             }
-        ] : [
-            {
-                shipping_rate_data: {
-                    type: "fixed_amount",
-                    fixed_amount: { amount: 0, currency: "eur" },
-                    display_name: shippingMethod === "CLICK_COLLECT" ? "Click & Collect (Atelier)" : "Livraison Offerte",
-                }
-            }
-        ];
-
-        // Create session
+        } catch {
+            await releaseOrder(reserved.order.id);
+            return { error: "Impossible de préparer la remise. Veuillez réessayer." };
+        }
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
-            line_items: lineItems,
-            mode: "payment",
-            success_url: `${origin}/cart?success=true`,
-            cancel_url: `${origin}/cart?canceled=true`,
-            customer_email: userEmail,
+            mode: "payment", payment_method_types: ["card"], customer_email: user.email,
+            client_reference_id: reserved.order.id,
+            metadata: { orderId: reserved.order.id },
+            line_items: reserved.items.map(item => ({ price_data: {
+                currency: "eur", product_data: { name: item.name }, unit_amount: Math.round(item.price * 100),
+            }, quantity: 1 })),
             discounts: couponId ? [{ coupon: couponId }] : undefined,
-            shipping_options: shippingOptions as any,
-            metadata: {
-                userEmail,
-                appliedCode: appliedCode?.code || "",
-                shippingMethod,
-                shippingCost: shippingCost.toString(),
-                itemsJson: JSON.stringify(items.map(i => ({ id: i.id, category: i.category, price: i.price })))
-            }
-        });
-
+            shipping_address_collection: shippingMethod === "HOME" && reserved.items.some(item => item.category !== "cartes-cadeaux") ? { allowed_countries: ["FR"] } : undefined,
+            phone_number_collection: { enabled: true },
+            shipping_options: [{ shipping_rate_data: {
+                type: "fixed_amount", fixed_amount: { amount: reserved.totals.shipping, currency: "eur" },
+                display_name: shippingMethod === "CLICK_COLLECT" ? "Retrait à l'atelier" : "Livraison",
+            } }],
+            expires_at: Math.floor(Date.now() / 1000) + 1800,
+            success_url: `${origin}/cart?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/cart?canceled=true`,
+        }, { idempotencyKey: `checkout-${reserved.order.id}` });
+        await prisma.order.update({ where: { id: reserved.order.id }, data: { stripeSessionId: session.id } });
         return { url: session.url };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Stripe Checkout Error:", error);
-        return { error: error.message || "Erreur lors de la création de la session Stripe." };
+        return { error: "Impossible de préparer le paiement. Vérifiez la disponibilité des articles ou contactez la boutique." };
     }
+}
+
+export async function getCheckoutStatus(sessionId: string) {
+    const user = await requireUser();
+    if (typeof sessionId !== "string" || sessionId.length > 255) return { paid: false };
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    const order = await prisma.order.findFirst({ where: { id: session.metadata?.orderId || "", userId: user.id } });
+    return { paid: Boolean(order && ["paid", "no_payment_required"].includes(session.payment_status)), confirmed: Boolean(order && !["PENDING_PAYMENT", "CANCELED"].includes(order.status)) };
 }
